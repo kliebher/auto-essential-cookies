@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "AutoEssentialCookies",
+  "version": "1.0",
+  "description": "Automatically manages cookie disclaimers by proceeding with essential cookies only.",
+  "permissions": ["activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [{
+    "matches": ["http://*/*", "https://*/*"],
+    "js": ["scripts/content.js"]
+  }]
+}
