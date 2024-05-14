@@ -57,16 +57,46 @@ class FindCookieRelatedNodes extends Command {
 }
 
 class IdentifyUniqueRoots extends Command {
-    constructor(nodes) {
+    constructor(cookieRelatedElements) {
         super()
-        this.nodes = nodes
-        this.invalidStartTags = []
-        this.invalidRootTags = []
+        this.nodesToBeProcessed = cookieRelatedElements
+        this.invalidStartTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta']);
+        this.invalidRootTags = new Set(['p', 'span', 'h2', 'h3', 'h4']);
     }
 
-    execute() {}
+    execute() {
+        for (let i = 0; i < this.nodesToBeProcessed.length; i++)  {
+            const node = this.nodesToBeProcessed[i];
+            const topLevelParentNode = this.identifyTopLevelParentNode(node);
+            if (this.isValidRoot(topLevelParentNode)) {
+                this.nodesToBeProcessed[i] = topLevelParentNode;
+            }
+            else {
+                this.nodesToBeProcessed.splice(i, 1);
+                i--
+            }
+        }
+    }
 
-    identifyTopLevelParentNode(node) {}
+    identifyTopLevelParentNode(node) {
+        if (!node) return null;
+        if (this.invalidStartTags.has(node.tagName.toLowerCase())) return null;
+        if (node.parentElement === null) return node;
+
+        const parentNodeTagName = node.parentElement.tagName.toLowerCase()
+        if (this.invalidStartTags.has(parentNodeTagName)) return node;
+
+        const styleParent = window.getComputedStyle(node.parentElement);
+        if (styleParent.width === '0px' || styleParent.height === '0px') return node;
+        if (styleParent.display === 'none' || styleParent.visibility === 'hidden') return node;
+
+        return this.identifyTopLevelParentNode(node.parentElement);
+    }
+
+    isValidRoot(node) {
+        if (this.nodesToBeProcessed.includes(node)) return false
+        return !this.invalidRootTags.has(node.tagName.toLowerCase())
+    }
 }
 
 class FindActionNodes extends Command {
@@ -127,7 +157,7 @@ class CookieBannerProcessor {
     process() {
         this.addCommands(
             new FindCookieRelatedNodes(this.banners),
-            // new IdentifyUniqueRoots(this.banners),
+            new IdentifyUniqueRoots(this.banners),
             // new FindActionNodes(this.banners),
             // new ClassifyActionNodes(this.banners),
             // new ExecuteAction(this.banners)
