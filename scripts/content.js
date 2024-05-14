@@ -1,9 +1,10 @@
-const QUERY = ['span, p, h3, h2, h4, aside, [id*="policy"], [id*="consent"], [id*="cookie"]']
+const QUERY = 'span, p, h3, h2, h4, aside, [id*="policy"], [id*="consent"], [id*="cookie"]'
 const KEYWORDS = {
     'DENY': ["ablehnen", "alle ablehnen", "reject", "decline", "notwendig", "auswahl"],
     'SETTINGS': ["settings", "einstellungen", "customize", "individuell", "purpose"],
     'CONFIRM': ["essenziell", "essential", "confirm my choices", "confirm choices", "save", "speichern", "selected", "ausgewählt"],
 }
+const LOADING_TIMEOUT = 500
 
 
 class Command {
@@ -17,15 +18,42 @@ class FindCookieRelatedNodes extends Command {
     constructor(result) {
         super()
         this.result = result
+        this.invalidTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta']);
     }
 
-    execute() {}
+    execute() {
+        const queryNodes = this.getQueryNodes()
+        for (const node of queryNodes) {
+            if (this.isCookieRelated(node)) {
+                this.result.push(node)
+                continue
+            }
 
-    getQueryNodes() {}
+            if (this.hasShadowRoot(node) && node.shadowRoot.childNodes) {
+                for (const childNode of node.shadowRoot.childNodes) {
+                    if (this.isCookieRelated(childNode)) {
+                        this.result.push(childNode)
+                    }
+                }
 
-    isCookieRelated(node) {}
+            }
+        }
+    }
 
-    hasShadowRoot(node) {}
+    getQueryNodes() {
+        return document.querySelectorAll(QUERY)
+    }
+
+    isCookieRelated(node) {
+        const nodeInnerText = node.innerText.toLowerCase();
+        if (this.invalidTags.has(node.tagName.toLowerCase())) return false
+        if (node.nodeType !== Node.ELEMENT_NODE) return false
+        return nodeInnerText.includes('cookies') || nodeInnerText.includes('privacy')
+    }
+
+    hasShadowRoot(node) {
+        return !!node.shadowRoot
+    }
 }
 
 class IdentifyUniqueRoots extends Command {
@@ -99,10 +127,10 @@ class CookieBannerProcessor {
     process() {
         this.addCommands(
             new FindCookieRelatedNodes(this.banners),
-            new IdentifyUniqueRoots(this.banners),
-            new FindActionNodes(this.banners),
-            new ClassifyActionNodes(this.banners),
-            new ExecuteAction(this.banners)
+            // new IdentifyUniqueRoots(this.banners),
+            // new FindActionNodes(this.banners),
+            // new ClassifyActionNodes(this.banners),
+            // new ExecuteAction(this.banners)
         )
         this.executeCommands()
     }
@@ -115,3 +143,14 @@ class CookieBannerProcessor {
         this.commands.forEach(command => command.execute())
     }
 }
+
+
+function main() {
+    setTimeout( () => {
+        const CBP = new CookieBannerProcessor()
+        console.log(CBP.banners)
+    }, LOADING_TIMEOUT)
+
+}
+
+window.onload = main
