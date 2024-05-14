@@ -99,6 +99,25 @@ class IdentifyUniqueRoots extends Command {
     }
 }
 
+class CreateCookieBannerObject extends Command {
+    constructor(roots) {
+        super()
+        this.roots = roots
+    }
+
+    execute() {
+        for (let i = 0; i < this.roots.length; i++) {
+            this.roots[i] = new CookieBanner(this.roots[i])
+        }
+    }
+}
+
+class CookieBanner {
+    constructor(root) {
+        this.root = root
+    }
+}
+
 class FindActionNodes extends Command {
     constructor(roots) {
         super()
@@ -158,6 +177,7 @@ class CookieBannerProcessor {
         this.addCommands(
             new FindCookieRelatedNodes(this.banners),
             new IdentifyUniqueRoots(this.banners),
+            new CreateCookieBannerObject(this.banners),
             // new FindActionNodes(this.banners),
             // new ClassifyActionNodes(this.banners),
             // new ExecuteAction(this.banners)
