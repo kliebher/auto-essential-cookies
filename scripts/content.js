@@ -115,22 +115,35 @@ class CreateCookieBannerObject extends Command {
 class CookieBanner {
     constructor(root) {
         this.root = root
+        this.actionElements = {}
     }
 }
 
 class FindActionNodes extends Command {
-    constructor(roots) {
+    constructor(banner) {
         super()
-        this.elements = roots
+        this.banner = banner
     }
 
-    execute() {}
+    execute() {
+        for (const banner of this.banner) {
+            banner.actionElements['buttons'] = this.getButtons(banner.root)
+            banner.actionElements['checkboxes'] = this.getCheckboxes(banner.root)
+            banner.actionElements['links'] = this.getLinks(banner.root)
+        }
+    }
 
-    getButtons(node) {}
+    getButtons(root) {
+        return Array.from(root.querySelectorAll('button'));
+    }
 
-    getCheckboxes(node) {}
+    getCheckboxes(root) {
+        return Array.from(root.querySelectorAll('input[type="checkbox"]'));
+    }
 
-    getLinks(node) {}
+    getLinks(root) {
+        return Array.from(root.querySelectorAll('a'));
+    }
 }
 
 class ClassifyActionNodes extends Command {
@@ -178,7 +191,7 @@ class CookieBannerProcessor {
             new FindCookieRelatedNodes(this.banners),
             new IdentifyUniqueRoots(this.banners),
             new CreateCookieBannerObject(this.banners),
-            // new FindActionNodes(this.banners),
+            new FindActionNodes(this.banners),
             // new ClassifyActionNodes(this.banners),
             // new ExecuteAction(this.banners)
         )
