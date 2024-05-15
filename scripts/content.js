@@ -15,6 +15,29 @@ class Command {
     }
 }
 
+class CookieBanner {
+    constructor(root) {
+        this.root = root
+        this.actionElements = {}
+        this.actions = []
+        this.executedActions = []
+        this.completed = false
+    }
+}
+
+class CookieBannerAction {
+    constructor(element, type) {
+        this.element = element;
+        this.type = type;
+    }
+
+    execute() {
+        this.element.click()
+        return this.type !== 'SETTINGS'
+    }
+}
+ 
+
 
 class FindCookieRelatedNodes extends Command {
     constructor(result, query = QUERY) {
@@ -69,7 +92,7 @@ class IdentifyUniqueRoots extends Command {
     constructor(cookieRelatedElements) {
         super()
         this.nodesToBeProcessed = cookieRelatedElements
-        this.invalidStartTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta']);
+        this.invalidStartTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta', 'strong']);
         this.invalidRootTags = new Set(['p', 'span', 'h2', 'h3', 'h4']);
     }
 
@@ -121,27 +144,6 @@ class CreateCookieBannerObject extends Command {
     }
 }
 
-class CookieBanner {
-    constructor(root) {
-        this.root = root
-        this.actionElements = {}
-        this.actions = []
-        this.completed = false
-    }
-}
-
-class CookieBannerAction {
-    constructor(element, type) {
-        this.element = element;
-        this.type = type;
-    }
-
-    execute() {
-        this.element.click()
-        return this.type !== 'SETTINGS'
-    }
-}
-
 class FindActionNodes extends Command {
     constructor(banner) {
         super()
@@ -177,12 +179,16 @@ class ClassifyActionNodes extends Command {
     }
 
     execute() {
-        for (const banner of this.cookieBanners) {
+        for (let i = 0; i < this.cookieBanners.length; i++) {
+            const banner = this.cookieBanners[i]
             const actionNodesQueue = this.createActionNodesQueue(banner)
             const result = this.findMatchingKeywords(actionNodesQueue)
             if (result) {
                 this.createBannerAction(banner, result)
+                continue
             }
+            this.cookieBanners.splice(i, 1)
+            i--
         }
     }
 
@@ -192,14 +198,15 @@ class ClassifyActionNodes extends Command {
 
     findMatchingKeywords(actionNodesQueue) {
         for (const keywordList of this.keywordLists) {
-            while (actionNodesQueue.length > 0) {
-                const actionNodes = actionNodesQueue.shift()
+            for (const actionNodes of actionNodesQueue) {
+                if (actionNodes.length === 0) continue
                 const matches = this.findMatches(actionNodes, keywordList)
-                if (matches) {
+                if (matches.length > 0) {
                     return this.handleMatches(matches, this.getActionType(keywordList))
                 }
             }
         }
+        return null
     }
 
     findMatches(actionNodes, keywords) {
@@ -243,7 +250,10 @@ class ExecuteAction extends Command {
     }
 
     executeAction(banner) {
-        banner.completed = banner.actions.pop().execute()
+        if (banner.actions.length === 0) return
+        const action = banner.actions.pop()
+        banner.completed = action.execute()
+        banner.executedActions.push(action)
     }
 
     unselectCheckboxes(checkboxes) {
@@ -292,7 +302,8 @@ class CookieBannerProcessor {
 
 function main() {
     setTimeout( () => {
-        new CookieBannerProcessor()
+        const CBP = new CookieBannerProcessor()
+        console.log(CBP.banners)
     }, LOADING_TIMEOUT)
 
 }
