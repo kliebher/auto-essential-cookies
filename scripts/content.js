@@ -4,6 +4,8 @@ const KEYWORDS = {
     'SETTINGS': ["settings", "einstellungen", "customize", "individuell", "purpose"],
     'CONFIRM': ["essenziell", "essential", "confirm my choices", "confirm choices", "save", "speichern", "selected", "ausgewählt"],
 }
+const INITIAL_TAB_KEYWORDS = [KEYWORDS.DENY, KEYWORDS.SETTINGS]
+const SETTINGS_TAB_KEYWORDS = [KEYWORDS.DENY, KEYWORDS.CONFIRM]
 const LOADING_TIMEOUT = 500
 
 
@@ -15,10 +17,12 @@ class Command {
 
 
 class FindCookieRelatedNodes extends Command {
-    constructor(result) {
+    constructor(result, query = QUERY) {
         super()
         this.result = result
         this.invalidTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta']);
+        this.query = query
+        this.retried = false
     }
 
     execute() {
@@ -28,20 +32,13 @@ class FindCookieRelatedNodes extends Command {
                 this.result.push(node)
                 continue
             }
-
-            if (this.hasShadowRoot(node) && node.shadowRoot.childNodes) {
-                for (const childNode of node.shadowRoot.childNodes) {
-                    if (this.isCookieRelated(childNode)) {
-                        this.result.push(childNode)
-                    }
-                }
-
-            }
+            this.checkForShadowRoot(node)
         }
+        this.retry()
     }
 
     getQueryNodes() {
-        return document.querySelectorAll(QUERY)
+        return document.querySelectorAll(this.query)
     }
 
     isCookieRelated(node) {
@@ -51,8 +48,20 @@ class FindCookieRelatedNodes extends Command {
         return nodeInnerText.includes('cookies') || nodeInnerText.includes('privacy')
     }
 
-    hasShadowRoot(node) {
-        return !!node.shadowRoot
+    checkForShadowRoot(node) {
+        if (!node.shadowRoot || !node.shadowRoot.childNodes) return
+        for (const childNode of node.shadowRoot.childNodes) {
+            if (this.isCookieRelated(childNode)) {
+                this.result.push(childNode)
+            }
+        }
+    }
+
+    retry() {
+        if (this.result.length > 0 || this.retried) return
+        this.query = 'div'
+        this.retry = true
+        this.execute()
     }
 }
 
@@ -116,6 +125,14 @@ class CookieBanner {
     constructor(root) {
         this.root = root
         this.actionElements = {}
+        this.actions = []
+    }
+}
+
+class CookieBannerAction {
+    constructor(element, type) {
+        this.element = element;
+        this.type = type;
     }
 }
 
@@ -147,16 +164,63 @@ class FindActionNodes extends Command {
 }
 
 class ClassifyActionNodes extends Command {
-    constructor(nodes) {
+    constructor(cookieBanners, keywordLists) {
         super()
-        this.nodes = nodes
+        this.cookieBanners = cookieBanners
+        this.keywordLists = keywordLists
     }
 
-    execute() {}
+    execute() {
+        for (const banner of this.cookieBanners) {
+            const actionNodesQueue = this.createActionNodesQueue(banner)
+            const result = this.findMatchingKeywords(actionNodesQueue)
+            if (result) {
+                this.createBannerAction(banner, result)
+            }
+        }
+    }
 
-    findMatchingKeywords(node) {}
+    createActionNodesQueue(banner) {
+        return [banner.actionElements.buttons, banner.actionElements.links]
+    }
 
-    createBannerAction(node) {}
+    findMatchingKeywords(actionNodesQueue) {
+        for (const keywordList of this.keywordLists) {
+            while (actionNodesQueue.length > 0) {
+                const actionNodes = actionNodesQueue.shift()
+                const matches = this.findMatches(actionNodes, keywordList)
+                if (matches) {
+                    return this.handleMatches(matches, this.getActionType(keywordList))
+                }
+            }
+        }
+    }
+
+    findMatches(actionNodes, keywords) {
+        return actionNodes.filter(node => {
+            const nodeInnerText = node.innerText.toLowerCase();
+            if (!nodeInnerText) return false
+            return keywords.some(keyword => nodeInnerText.includes(keyword))
+        });
+    }
+
+    handleMatches(matches, actionType) {
+        const firstMatch = matches.shift()
+        return [firstMatch, actionType]
+    }
+
+    getActionType(keywords) {
+        for (const [keywordListType, keywordList] of Object.entries(KEYWORDS)) {
+            if (keywordList === keywords) return keywordListType
+        }
+        return null
+    }
+
+    createBannerAction(banner, findKeywordResult) {
+        const [node, actionType] = findKeywordResult
+        const action = new CookieBannerAction(node, actionType)
+        banner.actions.push(action)
+    }
 }
 
 class ExecuteAction extends Command {
@@ -192,7 +256,7 @@ class CookieBannerProcessor {
             new IdentifyUniqueRoots(this.banners),
             new CreateCookieBannerObject(this.banners),
             new FindActionNodes(this.banners),
-            // new ClassifyActionNodes(this.banners),
+            new ClassifyActionNodes(this.banners, INITIAL_TAB_KEYWORDS),
             // new ExecuteAction(this.banners)
         )
         this.executeCommands()
