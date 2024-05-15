@@ -34,7 +34,7 @@ class FindCookieRelatedNodes extends Command {
             }
             this.checkForShadowRoot(node)
         }
-        this.retry()
+        if (!this.retried) this.retry()
     }
 
     getQueryNodes() {
@@ -58,7 +58,7 @@ class FindCookieRelatedNodes extends Command {
     }
 
     retry() {
-        if (this.result.length > 0 || this.retried) return
+        if (this.result.length > 0) return
         this.query = 'div'
         this.retry = true
         this.execute()
@@ -126,6 +126,7 @@ class CookieBanner {
         this.root = root
         this.actionElements = {}
         this.actions = []
+        this.completed = false
     }
 }
 
@@ -133,6 +134,11 @@ class CookieBannerAction {
     constructor(element, type) {
         this.element = element;
         this.type = type;
+    }
+
+    execute() {
+        this.element.click()
+        return this.type !== 'SETTINGS'
     }
 }
 
@@ -224,14 +230,25 @@ class ClassifyActionNodes extends Command {
 }
 
 class ExecuteAction extends Command {
-    constructor(action) {
+    constructor(banners) {
         super()
-        this.action = action
+        this.banners = banners
     }
 
-    execute() {}
+    execute() {
+        for (const banner of this.banners) {
+            this.unselectCheckboxes(banner.actionElements.checkboxes)
+            this.executeAction(banner)
+        }
+    }
 
-    unselectCheckboxes(node) {}
+    executeAction(banner) {
+        banner.completed = banner.actions.pop().execute()
+    }
+
+    unselectCheckboxes(checkboxes) {
+        checkboxes.forEach(checkbox => checkbox.checked = false)
+    }
 }
 
 class CheckState extends Command {
@@ -257,7 +274,8 @@ class CookieBannerProcessor {
             new CreateCookieBannerObject(this.banners),
             new FindActionNodes(this.banners),
             new ClassifyActionNodes(this.banners, INITIAL_TAB_KEYWORDS),
-            // new ExecuteAction(this.banners)
+            new ExecuteAction(this.banners),
+            // new CheckState(this.banners),
         )
         this.executeCommands()
     }
@@ -274,8 +292,7 @@ class CookieBannerProcessor {
 
 function main() {
     setTimeout( () => {
-        const CBP = new CookieBannerProcessor()
-        console.log(CBP.banners)
+        new CookieBannerProcessor()
     }, LOADING_TIMEOUT)
 
 }
