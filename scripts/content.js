@@ -40,10 +40,14 @@ class CookieBannerAction {
 
     execute() {
         this.element.click()
+        return this.isBannerCompleted()
+    }
+
+    isBannerCompleted() {
         return this.type !== 'SETTINGS'
     }
 }
- 
+
 
 
 class FindCookieRelatedNodes extends Command {
