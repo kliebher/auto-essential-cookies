@@ -315,7 +315,7 @@ class CheckState extends Command {
         super()
         this.result = result
         this.state = state
-        this.CommandProvider = new CommandProvider(this.state)
+        this.CommandProvider = new CommandSequenceProvider(this.state)
     }
 
     async execute() {
