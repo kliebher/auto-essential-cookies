@@ -366,6 +366,18 @@ const COMMAND_SEQUENCE_SAME_ROOT = (keywords, state) => {
         new CheckState(state.result, state)
     ]
 }
+
+class CommandSequenceProvider {
+    constructor(state) {
+        this.state = state;
+    }
+
+    get(sameRoot = false, settings = false) {
+        const sequence = sameRoot ? COMMAND_SEQUENCE_SAME_ROOT : COMMAND_SEQUENCE_FULL_DOM
+        const keywords = settings ? SETTINGS_TAB_KEYWORDS : INITIAL_TAB_KEYWORDS
+        return sequence(keywords, this.state)
+    }
+}
     constructor() {
         this.banners = []
         this.commands = []
