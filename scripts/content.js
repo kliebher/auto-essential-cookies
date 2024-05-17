@@ -276,21 +276,24 @@ class ClassifyActionNodes extends Command {
 }
 
 class ExecuteAction extends Command {
-    constructor(banners) {
+    constructor(result) {
         super()
-        this.banners = banners
+        this.result = result
     }
 
-    execute() {
-        for (const banner of this.banners) {
-            this.unselectCheckboxes(banner.actionElements.checkboxes)
-            this.executeAction(banner)
-        }
+    async execute() {
+        if (this.result.length === 0) return
+        await new Promise((resolve) => {
+            for (const result of this.result) {
+                this.unselectCheckboxes(result.actionElements.checkboxes)
+                this.executeAction(result)
+            }
+            resolve()
+        })
     }
 
     executeAction(banner) {
-        if (banner.actions.length === 0) return
-        const action = banner.actions.pop()
+        const action = banner.actions.shift()
         banner.completed = action.execute()
         banner.executedActions.push(action)
     }
