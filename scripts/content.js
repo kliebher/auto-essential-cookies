@@ -445,6 +445,24 @@ class ProcessState {
         this.actionsPerformed = []
     }
 }
+
+class ProcessManager {
+    constructor() {
+        this.ProcessState = new ProcessState()
+        this.CommandExecutor = new CommandExecutor()
+        this.CommandProvider = new CommandSequenceProvider(this.ProcessState)
+    }
+
+    async init() {
+        this.ProcessState.commandsToBeAdded.push([[], this.CommandProvider.get()])
+        this.CommandExecutor.addCommandQueueItem(...this.ProcessState.commandsToBeAdded.shift())
+        do {
+            this.ProcessState.result = this.CommandExecutor.setNextCommandSequence()
+            await this.CommandExecutor.executeCommands()
+            const nextCommandSequence = this.ProcessState.commandsToBeAdded.shift()
+            if(!nextCommandSequence) break
+            this.CommandExecutor.addCommandQueueItem(...nextCommandSequence)
+        } while (this.CommandExecutor.commandQueue.hasNext())
     }
 }
 
