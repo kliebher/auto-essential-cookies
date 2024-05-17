@@ -143,15 +143,19 @@ class IdentifyUniqueRoots extends Command {
 }
 
 class CreateCookieBannerObject extends Command {
-    constructor(roots) {
+    constructor(result) {
         super()
-        this.roots = roots
+        this.result = result
     }
 
-    execute() {
-        for (let i = 0; i < this.roots.length; i++) {
-            this.roots[i] = new CookieBanner(this.roots[i])
-        }
+    async execute() {
+        if (this.result.length === 0) return
+        await new Promise((resolve) => {
+            for (let i = 0; i < this.result.length; i++) {
+                this.result[i] = new CookieBanner(this.result[i])
+            }
+            resolve()
+        })
     }
 }
 
