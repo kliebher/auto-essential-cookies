@@ -160,17 +160,21 @@ class CreateCookieBannerObject extends Command {
 }
 
 class FindActionNodes extends Command {
-    constructor(banner) {
+    constructor(result) {
         super()
-        this.banner = banner
+        this.result = result
     }
 
-    execute() {
-        for (const banner of this.banner) {
-            banner.actionElements['buttons'] = this.getButtons(banner.root)
-            banner.actionElements['checkboxes'] = this.getCheckboxes(banner.root)
-            banner.actionElements['links'] = this.getLinks(banner.root)
-        }
+    async execute() {
+        if (this.result.length === 0) return
+        await new Promise((resolve) => {
+            for (const banner of this.result) {
+                banner.actionElements['buttons'] = this.getButtons(banner.root)
+                banner.actionElements['checkboxes'] = this.getCheckboxes(banner.root)
+                banner.actionElements['links'] = this.getLinks(banner.root)
+            }
+            resolve()
+        })
     }
 
     getButtons(root) {
