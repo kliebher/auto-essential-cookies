@@ -191,24 +191,27 @@ class FindActionNodes extends Command {
 }
 
 class ClassifyActionNodes extends Command {
-    constructor(cookieBanners, keywordLists) {
+    constructor(result, keywordLists, state) {
         super()
-        this.cookieBanners = cookieBanners
+        this.result = result
         this.keywordLists = keywordLists
+        this.state = state
     }
 
-    execute() {
-        for (let i = 0; i < this.cookieBanners.length; i++) {
-            const banner = this.cookieBanners[i]
-            const actionNodesQueue = this.createActionNodesQueue(banner)
-            const result = this.findMatchingKeywords(actionNodesQueue)
-            if (result) {
-                this.createBannerAction(banner, result)
-                continue
+    async execute() {
+        if (this.result.length === 0) return
+        await new Promise((resolve) => {
+            for (let i = 0; i < this.result.length; i++) {
+                const banner = this.result[i]
+                const actionNodesQueue = this.createActionNodesQueue(banner)
+                const result = this.findMatchingKeywords(actionNodesQueue)
+                result ? this.createBannerAction(banner, result) : this.result.splice(i--, 1)
             }
-            this.cookieBanners.splice(i, 1)
-            i--
-        }
+            if (this.state.bannersInProgress === -1)
+                this.state.bannersInProgress = this.result.length
+
+            resolve()
+        })
     }
 
     createActionNodesQueue(banner) {
@@ -238,7 +241,10 @@ class ClassifyActionNodes extends Command {
 
     handleMatches(matches, actionType) {
         const firstMatch = matches.shift()
-        return [firstMatch, actionType]
+        let result = [firstMatch, actionType]
+        result = this.checkForCombinedActions(result)
+        const actionAlreadyPerformed = this.state.actionsPerformed.includes(firstMatch)
+        return actionAlreadyPerformed ? null : result
     }
 
     getActionType(keywords) {
@@ -251,7 +257,21 @@ class ClassifyActionNodes extends Command {
     createBannerAction(banner, findKeywordResult) {
         const [node, actionType] = findKeywordResult
         const action = new CookieBannerAction(node, actionType)
+        this.state.actionsPerformed.push(node)
+        // banner.root.style.opacity = '0'
         banner.actions.push(action)
+    }
+
+    checkForCombinedActions(findKeywordResult) {
+        const [node, actionType] = findKeywordResult
+        if (actionType === 'DENY') {
+            const actionToLookFor = 'SETTINGS'
+            const combinedResult = this.findMatches([node], KEYWORDS[actionToLookFor])
+            if (combinedResult.length > 0) {
+                return [node, actionToLookFor]
+            }
+        }
+        return findKeywordResult
     }
 }
 
