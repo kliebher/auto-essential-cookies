@@ -97,26 +97,29 @@ class FindCookieRelatedNodes extends Command {
 }
 
 class IdentifyUniqueRoots extends Command {
-    constructor(cookieRelatedElements) {
+    constructor(result) {
         super()
-        this.nodesToBeProcessed = cookieRelatedElements
+        this.result = result
         this.invalidStartTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta', 'strong']);
         this.invalidRootTags = new Set(['p', 'span', 'h2', 'h3', 'h4']);
     }
 
-    execute() {
-        for (let i = 0; i < this.nodesToBeProcessed.length; i++)  {
-            const node = this.nodesToBeProcessed[i];
-            const topLevelParentNode = this.identifyTopLevelParentNode(node);
-            if (this.isValidRoot(topLevelParentNode)) {
-                this.nodesToBeProcessed[i] = topLevelParentNode;
+    async execute() {
+        if (this.result.length === 0) return
+        await new Promise((resolve) => {
+            for (let i = 0; i < this.result.length; i++) {
+                const node = this.result[i];
+                const topLevelParentNode = this.identifyTopLevelParentNode(node);
+                if (this.isValidRoot(node, topLevelParentNode)) {
+                    this.result[i] = topLevelParentNode;
+                } else {
+                    this.result.splice(i--, 1);
+                }
             }
-            else {
-                this.nodesToBeProcessed.splice(i, 1);
-                i--
-            }
-        }
+            resolve()
+        })
     }
+
 
     identifyTopLevelParentNode(node) {
         if (!node) return null;
@@ -133,9 +136,9 @@ class IdentifyUniqueRoots extends Command {
         return this.identifyTopLevelParentNode(node.parentElement);
     }
 
-    isValidRoot(node) {
-        if (this.nodesToBeProcessed.includes(node)) return false
-        return !this.invalidRootTags.has(node.tagName.toLowerCase())
+    isValidRoot(node, topLevelParentNode) {
+        if (this.invalidRootTags.has(topLevelParentNode.tagName.toLowerCase())) return false
+        return !(this.result.includes(topLevelParentNode) && node !== topLevelParentNode);
     }
 }
 
