@@ -378,28 +378,39 @@ class CommandSequenceProvider {
         return sequence(keywords, this.state)
     }
 }
-    constructor() {
-        this.banners = []
-        this.commands = []
-        this.process()
-    }
 
-    process() {
-        this.addCommands(
-            new FindCookieRelatedNodes(this.banners),
-            new IdentifyUniqueRoots(this.banners),
-            new CreateCookieBannerObject(this.banners),
-            new FindActionNodes(this.banners),
-            new ClassifyActionNodes(this.banners, INITIAL_TAB_KEYWORDS),
-            new ExecuteAction(this.banners),
-            // new CheckState(this.banners),
-        )
-        this.executeCommands()
+class CommandExecutor {
+
+    constructor() {
+        this.currentCommands = []
+        this.commandQueue = new CommandQueue()
     }
 
     addCommands(...commands) {
-        commands.forEach(command => this.commands.push(command))
+        this.clearCommands()
+        commands.forEach(command => this.currentCommands.push(command))
     }
+
+    async executeCommands() {
+        for (const command of this.currentCommands) {
+            await command.execute()
+        }
+    }
+
+    clearCommands() {
+        this.currentCommands = []
+    }
+
+    setNextCommandSequence() {
+        const next = this.commandQueue.getNext()
+        this.addCommands(...next.sequence)
+        return next.result
+    }
+
+    addCommandQueueItem(result, sequence) {
+        this.commandQueue.add(result, sequence)
+    }
+}
 
     executeCommands() {
         this.commands.forEach(command => command.execute())
