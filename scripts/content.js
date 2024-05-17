@@ -468,11 +468,11 @@ class ProcessManager {
 
 
 function main() {
-    setTimeout( () => {
-        const CBP = new CookieBannerProcessor()
-        console.log(CBP.banners)
-    }, LOADING_TIMEOUT)
-
+    if (sessionStorage.getItem('AEC') === null) {
+        setTimeout(async () => {
+            await new ProcessManager().init()
+        }, LOADING_TIMEOUT)
+    }
 }
 
 window.onload = main
