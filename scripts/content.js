@@ -1,4 +1,4 @@
-const QUERY = 'span, p, h3, h2, h4, aside, [id*="policy"], [id*="consent"], [id*="cookie"]'
+const QUERY = 'span, p, h3, h2, h4, aside, [id*="policy"], [id*="consent"], [id*="cookie"], [aria-label*="policy"], [aria-label*="consent"], [aria-label*="cookie"]'
 const KEYWORDS = {
     'DENY': ["ablehnen", "alle ablehnen", "reject", "decline", "notwendig", "auswahl"],
     'SETTINGS': ["settings", "einstellungen", "customize", "individuell", "purpose"],
