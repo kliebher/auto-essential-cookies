@@ -48,7 +48,16 @@ class FindCookieRelatedNodes extends Command {
         this.retried = false
     }
 
-    execute() {
+    async execute() {
+        await new Promise((resolve) => {
+            this.validateQueryNodes()
+            if (this.result.length === 0 && !this.retried)
+                this.retry()
+            resolve()
+        })
+    }
+
+    validateQueryNodes() {
         const queryNodes = this.getQueryNodes()
         for (const node of queryNodes) {
             if (this.isCookieRelated(node)) {
@@ -57,7 +66,6 @@ class FindCookieRelatedNodes extends Command {
             }
             this.checkForShadowRoot(node)
         }
-        if (!this.retried) this.retry()
     }
 
     getQueryNodes() {
@@ -65,9 +73,10 @@ class FindCookieRelatedNodes extends Command {
     }
 
     isCookieRelated(node) {
+        if (!node.innerText) return false
         const nodeInnerText = node.innerText.toLowerCase();
         if (this.invalidTags.has(node.tagName.toLowerCase())) return false
-        if (node.nodeType !== Node.ELEMENT_NODE) return false
+        // if (node.nodeType !== Node.ELEMENT_NODE) return false
         return nodeInnerText.includes('cookies') || nodeInnerText.includes('privacy')
     }
 
@@ -81,10 +90,9 @@ class FindCookieRelatedNodes extends Command {
     }
 
     retry() {
-        if (this.result.length > 0) return
         this.query = 'div'
-        this.retry = true
-        this.execute()
+        this.retried = true
+        this.validateQueryNodes()
     }
 }
 
