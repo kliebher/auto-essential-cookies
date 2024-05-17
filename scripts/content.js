@@ -345,7 +345,6 @@ class CheckState extends Command {
     }
 }
 
-class CookieBannerProcessor {
 const COMMAND_SEQUENCE_FULL_DOM = (keywords, state) => {
     return [
         new FindCookieRelatedNodes(state.result),
