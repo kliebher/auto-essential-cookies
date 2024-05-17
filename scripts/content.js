@@ -9,6 +9,13 @@ const SETTINGS_TAB_KEYWORDS = [KEYWORDS.DENY, KEYWORDS.CONFIRM]
 const LOADING_TIMEOUT = 500
 
 
+function timeout(ms = LOADING_TIMEOUT) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms)
+    })
+}
+
+
 class Command {
     execute() {
         throw new Error('execute() must be implemented')
@@ -304,12 +311,38 @@ class ExecuteAction extends Command {
 }
 
 class CheckState extends Command {
-    constructor(nodes) {
+    constructor(result, state) {
         super()
-        this.nodes = nodes
+        this.result = result
+        this.state = state
+        this.CommandProvider = new CommandProvider(this.state)
     }
 
-    execute() {}
+    async execute() {
+        if (this.result.length === 0) return
+        await new Promise((resolve) => {
+            const completedBanners = this.result.filter(banner => banner.completed)
+            this.state.bannersInProgress -= completedBanners.length
+            if (this.state.bannersInProgress === 0) {
+                sessionStorage.setItem('AEC', 'done')
+                return
+            }
+            if (!this.state.addedCommands) this.addSubsequentCommands()
+            resolve()
+        })
+        // wait for DOM to update after click
+        await timeout()
+    }
+
+    addSubsequentCommands() {
+        this.result.filter(banner => !banner.completed).forEach(bannerInProgress => {
+            this.state.commandsToBeAdded.push(
+                [[bannerInProgress], this.CommandProvider.get(true, true)]
+            )
+        })
+        this.state.commandsToBeAdded.push([[], this.CommandProvider.get(false, true)])
+        this.state.addedCommands = true
+    }
 }
 
 class CookieBannerProcessor {
