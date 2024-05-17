@@ -413,6 +413,31 @@ class CommandExecutor {
 
     executeCommands() {
         this.commands.forEach(command => command.execute())
+class CommandQueue {
+    constructor() {
+        this.queue = []
+    }
+
+    add(result, sequence) {
+        this.queue.push(new CommandQueueItem(result, sequence))
+    }
+
+    getNext() {
+        return this.queue.shift()
+    }
+
+    hasNext() {
+        return this.queue.length > 0
+    }
+}
+
+class CommandQueueItem {
+    constructor(result, sequence) {
+        this.result = result
+        this.sequence = sequence
+    }
+}
+
     }
 }
 
