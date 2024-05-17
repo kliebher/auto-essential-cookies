@@ -411,8 +411,6 @@ class CommandExecutor {
     }
 }
 
-    executeCommands() {
-        this.commands.forEach(command => command.execute())
 class CommandQueue {
     constructor() {
         this.queue = []
@@ -438,6 +436,15 @@ class CommandQueueItem {
     }
 }
 
+class ProcessState {
+    constructor() {
+        this.bannersInProgress = -1
+        this.result = []
+        this.addedCommands = false
+        this.commandsToBeAdded = []
+        this.actionsPerformed = []
+    }
+}
     }
 }
 
