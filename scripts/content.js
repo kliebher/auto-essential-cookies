@@ -346,6 +346,26 @@ class CheckState extends Command {
 }
 
 class CookieBannerProcessor {
+const COMMAND_SEQUENCE_FULL_DOM = (keywords, state) => {
+    return [
+        new FindCookieRelatedNodes(state.result),
+        new IdentifyUniqueRoots(state.result),
+        new CreateCookieBannerObject(state.result),
+        new FindActionNodes(state.result),
+        new ClassifyActionNodes(state.result, keywords, state),
+        new ExecuteAction(state.result),
+        new CheckState(state.result, state)
+    ]
+}
+
+const COMMAND_SEQUENCE_SAME_ROOT = (keywords, state) => {
+    return [
+        new FindActionNodes(state.result),
+        new ClassifyActionNodes(state.result, keywords, state),
+        new ExecuteAction(state.result),
+        new CheckState(state.result, state)
+    ]
+}
     constructor() {
         this.banners = []
         this.commands = []
