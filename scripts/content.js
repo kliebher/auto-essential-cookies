@@ -360,7 +360,11 @@ class CheckState extends Command {
     }
 
     async execute() {
-        if (this.result.length === 0) return
+        if (this.result.length === 0 && this.state.bannersInProgress === -1) {
+            sessionStorage.setItem('AEC', 'done')
+            return
+        }
+        else if (this.result.length === 0) return
         await new Promise((resolve) => {
             const completedBanners = this.result.filter(banner => banner.completed)
             this.state.bannersInProgress -= completedBanners.length
