@@ -72,7 +72,7 @@ class FindCookieRelatedNodes extends Command {
     validateQueryNodes() {
         const queryNodes = this.getQueryNodes()
         for (const node of queryNodes) {
-            if (this.isCookieRelated(node)) {
+            if (this.isCookieRelated(node) && !this.inFooter(node)) {
                 this.result.push(node)
                 continue
             }
@@ -99,6 +99,11 @@ class FindCookieRelatedNodes extends Command {
                 this.result.push(childNode)
             }
         }
+    }
+
+    inFooter(node) {
+        const footer = document.querySelector('footer')
+        return footer ? footer.contains(node) : false
     }
 
     retry() {
