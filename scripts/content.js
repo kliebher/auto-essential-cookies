@@ -52,7 +52,7 @@ class CookieBannerAction {
 
 
 class FindCookieRelatedNodes extends Command {
-    constructor(result, query = QUERY) {
+    constructor(result, query = COOKIE_QUERY) {
         super()
         this.result = result
         this.invalidTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta']);
