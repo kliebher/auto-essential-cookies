@@ -170,6 +170,33 @@ class CreateCookieBannerObject extends Command {
     }
 }
 
+class DetectAboModel extends Command {
+    constructor(result) {
+        super();
+        this.result = result
+    }
+
+    execute() {
+        if (this.result.length === 0) return
+        for (let i = 0; i < this.result.length; i++) {
+            const banner = this.result[i]
+            if (this.isAboModel(banner.root)) {
+                this.result.splice(i--, 1)
+                if (this.result.length === 0) {
+                    createToast('Abonnement Banner')
+                    sessionStorage.setItem('AEC', 'done')
+                }
+            }
+        }
+    }
+
+    isAboModel(root) {
+        const aboModelKeywords = ['mit werbung', 'with advertising']
+        const rootInnerText = root.innerText.toLowerCase()
+        return aboModelKeywords.some(keyword => rootInnerText.includes(keyword))
+    }
+}
+
 class FindActionNodes extends Command {
     constructor(result) {
         super()
@@ -354,6 +381,7 @@ const COMMAND_SEQUENCE_FULL_DOM = (keywords, state) => {
         new FindCookieRelatedNodes(state.result),
         new IdentifyUniqueRoots(state.result),
         new CreateCookieBannerObject(state.result),
+        new DetectAboModel(state.result),
         new FindActionNodes(state.result),
         new ClassifyActionNodes(state.result, keywords, state),
         new ExecuteAction(state.result),
