@@ -212,10 +212,14 @@ class FindActionNodes extends Command {
     async execute() {
         if (this.result.length === 0) return
         await new Promise((resolve) => {
-            for (const banner of this.result) {
+            for (let i = 0; i < this.result.length; i++) {
+                const banner = this.result[i]
                 banner.actionElements['buttons'] = this.getButtons(banner.root)
                 banner.actionElements['checkboxes'] = this.getCheckboxes(banner.root)
                 banner.actionElements['links'] = this.getLinks(banner.root)
+                if (Object.values(banner.actionElements).every(actions => actions.length === 0)) {
+                    this.result.splice(i--, 1)
+                }
             }
             resolve()
         })
