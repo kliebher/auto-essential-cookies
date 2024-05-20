@@ -4,7 +4,7 @@ const KEYWORDS = {
     'SETTINGS': ["settings", "einstellungen", "customize", "individuell", "purpose"],
     'CONFIRM': ["essenziell", "essential", "confirm my choices", "confirm choices", "save", "speichern", "selected", "ausgewählt"],
 }
-const INITIAL_TAB_KEYWORDS = [KEYWORDS.DENY, KEYWORDS.SETTINGS]
+const INITIAL_TAB_KEYWORDS = [KEYWORDS.DENY, KEYWORDS.SETTINGS, KEYWORDS.CONFIRM]
 const SETTINGS_TAB_KEYWORDS = [KEYWORDS.DENY, KEYWORDS.CONFIRM]
 const LOADING_TIMEOUT = 500
 
