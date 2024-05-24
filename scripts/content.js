@@ -182,9 +182,6 @@ class DetectAboModel extends Command {
     }
 
     execute() {
-        if (this.result.length === 0) return
-        for (let i = 0; i < this.result.length; i++) {
-            const banner = this.result[i]
         if (this.state.result.length === 0) return
         for (let i = 0; i < this.state.result.length; i++) {
             const banner = this.state.result[i]
@@ -250,8 +247,6 @@ class ClassifyActionNodes extends Command {
     async execute() {
         if (this.state.result.length === 0) return
         await new Promise((resolve) => {
-            for (let i = 0; i < this.result.length; i++) {
-                const banner = this.result[i]
             for (let i = 0; i < this.state.result.length; i++) {
                 const banner = this.state.result[i]
                 const actionNodesQueue = this.createActionNodesQueue(banner)
@@ -295,7 +290,7 @@ class ClassifyActionNodes extends Command {
         const firstMatch = matches.shift()
         let result = [firstMatch, actionType]
         result = this.checkForCombinedActions(result)
-        const actionAlreadyPerformed = this.state.actionsPerformed.includes(firstMatch)
+        const actionAlreadyPerformed = this.state.clickedElements.includes(firstMatch)
         return actionAlreadyPerformed ? null : result
     }
 
@@ -309,7 +304,7 @@ class ClassifyActionNodes extends Command {
     createBannerAction(banner, findKeywordResult) {
         const [node, actionType] = findKeywordResult
         const action = new CookieBannerAction(node, actionType)
-        this.state.actionsPerformed.push(node)
+        this.state.clickedElements.push(node)
         // banner.root.style.opacity = '0'
         banner.actions.push(action)
     }
@@ -493,6 +488,7 @@ class ProcessState {
         this.addedCommands = false
         this.commandsToBeAdded = []
         this.actionsPerformed = []
+        this.clickedElements = []
     }
 }
 
