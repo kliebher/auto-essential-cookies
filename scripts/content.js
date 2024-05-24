@@ -50,11 +50,10 @@ class CookieBannerAction {
 }
 
 
-
 class FindCookieRelatedNodes extends Command {
-    constructor(result, query = COOKIE_QUERY) {
+    constructor(state, query = COOKIE_QUERY) {
         super()
-        this.result = result
+        this.state = state
         this.invalidTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta']);
         this.query = query
         this.retried = false
@@ -63,7 +62,7 @@ class FindCookieRelatedNodes extends Command {
     async execute() {
         await new Promise((resolve) => {
             this.validateQueryNodes()
-            if (this.result.length === 0 && !this.retried)
+            if (this.state.result.length === 0 && !this.retried)
                 this.retry()
             resolve()
         })
@@ -73,7 +72,7 @@ class FindCookieRelatedNodes extends Command {
         const queryNodes = this.getQueryNodes()
         for (const node of queryNodes) {
             if (this.isCookieRelated(node) && !this.inFooter(node)) {
-                this.result.push(node)
+                this.state.result.push(node)
                 continue
             }
             this.checkForShadowRoot(node)
@@ -114,23 +113,23 @@ class FindCookieRelatedNodes extends Command {
 }
 
 class IdentifyUniqueRoots extends Command {
-    constructor(result) {
+    constructor(state) {
         super()
-        this.result = result
+        this.state = state
         this.invalidStartTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta', 'strong']);
         this.invalidRootTags = new Set(['p', 'span', 'h2', 'h3', 'h4']);
     }
 
     async execute() {
-        if (this.result.length === 0) return
+        if (this.state.result.length === 0) return
         await new Promise((resolve) => {
-            for (let i = 0; i < this.result.length; i++) {
-                const node = this.result[i];
+            for (let i = 0; i < this.state.result.length; i++) {
+                const node = this.state.result[i];
                 const topLevelParentNode = this.identifyTopLevelParentNode(node);
                 if (this.isValidRoot(node, topLevelParentNode)) {
-                    this.result[i] = topLevelParentNode;
+                    this.state.result[i] = topLevelParentNode;
                 } else {
-                    this.result.splice(i--, 1);
+                    this.state.result.splice(i--, 1);
                 }
             }
             resolve()
@@ -155,21 +154,21 @@ class IdentifyUniqueRoots extends Command {
 
     isValidRoot(node, topLevelParentNode) {
         if (this.invalidRootTags.has(topLevelParentNode.tagName.toLowerCase())) return false
-        return !(this.result.includes(topLevelParentNode) && node !== topLevelParentNode);
+        return !(this.state.result.includes(topLevelParentNode) && node !== topLevelParentNode);
     }
 }
 
 class CreateCookieBannerObject extends Command {
-    constructor(result) {
+    constructor(state) {
         super()
-        this.result = result
+        this.state = state
     }
 
     async execute() {
-        if (this.result.length === 0) return
+        if (this.state.result.length === 0) return
         await new Promise((resolve) => {
-            for (let i = 0; i < this.result.length; i++) {
-                this.result[i] = new CookieBanner(this.result[i])
+            for (let i = 0; i < this.state.result.length; i++) {
+                this.state.result[i] = new CookieBanner(this.state.result[i])
             }
             resolve()
         })
@@ -177,18 +176,21 @@ class CreateCookieBannerObject extends Command {
 }
 
 class DetectAboModel extends Command {
-    constructor(result) {
+    constructor(state) {
         super();
-        this.result = result
+        this.state = state
     }
 
     execute() {
         if (this.result.length === 0) return
         for (let i = 0; i < this.result.length; i++) {
             const banner = this.result[i]
+        if (this.state.result.length === 0) return
+        for (let i = 0; i < this.state.result.length; i++) {
+            const banner = this.state.result[i]
             if (this.isAboModel(banner.root)) {
-                this.result.splice(i--, 1)
-                if (this.result.length === 0) {
+                this.state.result.splice(i--, 1)
+                if (this.state.result.length === 0) {
                     createToast('Abonnement Banner')
                     sessionStorage.setItem('AEC', 'done')
                 }
@@ -204,21 +206,21 @@ class DetectAboModel extends Command {
 }
 
 class FindActionNodes extends Command {
-    constructor(result) {
+    constructor(state) {
         super()
-        this.result = result
+        this.state = state
     }
 
     async execute() {
-        if (this.result.length === 0) return
+        if (this.state.result.length === 0) return
         await new Promise((resolve) => {
-            for (let i = 0; i < this.result.length; i++) {
-                const banner = this.result[i]
+            for (let i = 0; i < this.state.result.length; i++) {
+                const banner = this.state.result[i]
                 banner.actionElements['buttons'] = this.getButtons(banner.root)
                 banner.actionElements['checkboxes'] = this.getCheckboxes(banner.root)
                 banner.actionElements['links'] = this.getLinks(banner.root)
                 if (Object.values(banner.actionElements).every(actions => actions.length === 0)) {
-                    this.result.splice(i--, 1)
+                    this.state.result.splice(i--, 1)
                 }
             }
             resolve()
@@ -239,24 +241,26 @@ class FindActionNodes extends Command {
 }
 
 class ClassifyActionNodes extends Command {
-    constructor(result, keywordLists, state) {
+    constructor(state, keywordLists) {
         super()
-        this.result = result
-        this.keywordLists = keywordLists
         this.state = state
+        this.keywordLists = keywordLists
     }
 
     async execute() {
-        if (this.result.length === 0) return
+        if (this.state.result.length === 0) return
         await new Promise((resolve) => {
             for (let i = 0; i < this.result.length; i++) {
                 const banner = this.result[i]
+            for (let i = 0; i < this.state.result.length; i++) {
+                const banner = this.state.result[i]
                 const actionNodesQueue = this.createActionNodesQueue(banner)
                 const result = this.findMatchingKeywords(actionNodesQueue)
-                result ? this.createBannerAction(banner, result) : this.result.splice(i--, 1)
+                result ? this.createBannerAction(banner, result) : this.state.result.splice(i--, 1)
+                result ? banner.root.style.opacity = '0' : banner.root.style.opacity = '1'
             }
             if (this.state.bannersInProgress === -1)
-                this.state.bannersInProgress = this.result.length
+                this.state.bannersInProgress = this.state.result.length
 
             resolve()
         })
@@ -324,15 +328,15 @@ class ClassifyActionNodes extends Command {
 }
 
 class ExecuteAction extends Command {
-    constructor(result) {
+    constructor(state) {
         super()
-        this.result = result
+        this.state = state
     }
 
     async execute() {
-        if (this.result.length === 0) return
+        if (this.state.result.length === 0) return
         await new Promise((resolve) => {
-            for (const result of this.result) {
+            for (const result of this.state.result) {
                 this.unselectCheckboxes(result.actionElements.checkboxes)
                 this.executeAction(result)
             }
@@ -352,9 +356,8 @@ class ExecuteAction extends Command {
 }
 
 class CheckState extends Command {
-    constructor(result, state) {
+    constructor(state) {
         super()
-        this.result = result
         this.state = state
         this.CommandProvider = new CommandSequenceProvider(this.state)
     }
