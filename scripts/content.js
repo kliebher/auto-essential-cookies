@@ -354,7 +354,6 @@ class CheckState extends Command {
     constructor(state) {
         super()
         this.state = state
-        this.CommandProvider = new CommandSequenceProvider(this.state)
     }
 
     async execute() {
@@ -379,105 +378,59 @@ class CheckState extends Command {
     }
 
     addSubsequentCommands() {
-        this.result.filter(banner => !banner.completed).forEach(bannerInProgress => {
-            this.state.commandsToBeAdded.push(
-                [[bannerInProgress], this.CommandProvider.get(true, true)]
-            )
+        this.state.result.filter(banner => !banner.completed).forEach(bannerInProgress => {
+            this.state.addCommandSequence(true, true, [bannerInProgress])
         })
-        this.state.commandsToBeAdded.push([[], this.CommandProvider.get(false, true)])
+        this.state.addCommandSequence(false, true)
         this.state.addedCommands = true
     }
 }
 
-const COMMAND_SEQUENCE_FULL_DOM = (keywords, state) => {
-    return [
-        new FindCookieRelatedNodes(state.result),
-        new IdentifyUniqueRoots(state.result),
-        new CreateCookieBannerObject(state.result),
-        new DetectAboModel(state.result),
-        new FindActionNodes(state.result),
-        new ClassifyActionNodes(state.result, keywords, state),
-        new ExecuteAction(state.result),
-        new CheckState(state.result, state)
-    ]
-}
-
-const COMMAND_SEQUENCE_SAME_ROOT = (keywords, state) => {
-    return [
-        new FindActionNodes(state.result),
-        new ClassifyActionNodes(state.result, keywords, state),
-        new ExecuteAction(state.result),
-        new CheckState(state.result, state)
-    ]
-}
 
 class CommandSequenceProvider {
-    constructor(state) {
-        this.state = state;
+    constructor() {}
+
+    static get(state, sameRoot = false, settings = false) {
+        const sequence = sameRoot ? this.COMMAND_SEQUENCE_SAME_ROOT : this.COMMAND_SEQUENCE_FULL_DOM
+        const keywords = settings ? SETTINGS_TAB_KEYWORDS : INITIAL_TAB_KEYWORDS
+        return sequence(keywords, state)
     }
 
-    get(sameRoot = false, settings = false) {
-        const sequence = sameRoot ? COMMAND_SEQUENCE_SAME_ROOT : COMMAND_SEQUENCE_FULL_DOM
-        const keywords = settings ? SETTINGS_TAB_KEYWORDS : INITIAL_TAB_KEYWORDS
-        return sequence(keywords, this.state)
+    static COMMAND_SEQUENCE_FULL_DOM = (keywords, state) => {
+        return [
+            new FindCookieRelatedNodes(state),
+            new IdentifyUniqueRoots(state),
+            new CreateCookieBannerObject(state),
+            new DetectAboModel(state),
+            new FindActionNodes(state),
+            new ClassifyActionNodes(state, keywords),
+            new ExecuteAction(state),
+            new CheckState(state)
+        ]
+    }
+
+    static COMMAND_SEQUENCE_SAME_ROOT = (keywords, state) => {
+        return [
+            new FindActionNodes(state),
+            new ClassifyActionNodes(state, keywords),
+            new ExecuteAction(state),
+            new CheckState(state)
+        ]
     }
 }
 
 class CommandExecutor {
 
-    constructor() {
-        this.currentCommands = []
-        this.commandQueue = new CommandQueue()
-    }
-
-    addCommands(...commands) {
-        this.clearCommands()
-        commands.forEach(command => this.currentCommands.push(command))
+    constructor(state) {
+        this.state = state
     }
 
     async executeCommands() {
-        for (const command of this.currentCommands) {
+        const [ startingPoint, commandSequence ] = this.state.getNextCommandSequence()
+        this.state.result = startingPoint
+        for (const command of commandSequence) {
             await command.execute()
         }
-    }
-
-    clearCommands() {
-        this.currentCommands = []
-    }
-
-    setNextCommandSequence() {
-        const next = this.commandQueue.getNext()
-        this.addCommands(...next.sequence)
-        return next.result
-    }
-
-    addCommandQueueItem(result, sequence) {
-        this.commandQueue.add(result, sequence)
-    }
-}
-
-class CommandQueue {
-    constructor() {
-        this.queue = []
-    }
-
-    add(result, sequence) {
-        this.queue.push(new CommandQueueItem(result, sequence))
-    }
-
-    getNext() {
-        return this.queue.shift()
-    }
-
-    hasNext() {
-        return this.queue.length > 0
-    }
-}
-
-class CommandQueueItem {
-    constructor(result, sequence) {
-        this.result = result
-        this.sequence = sequence
     }
 }
 
@@ -486,29 +439,46 @@ class ProcessState {
         this.bannersInProgress = -1
         this.result = []
         this.addedCommands = false
-        this.commandsToBeAdded = []
-        this.actionsPerformed = []
+        this.nextCommands = []
         this.clickedElements = []
+        this.startedAt = null
+    }
+
+    addCommandSequence(sameRoot = false, settings = false, startingPoint = []) {
+        this.nextCommands.push([startingPoint, CommandSequenceProvider.get(this, sameRoot, settings)])
+    }
+
+    getNextCommandSequence() {
+        return this.nextCommands.shift()
+    }
+
+    setStartingTime() {
+        this.startedAt = performance.now()
+    }
+
+    printTime() {
+        const time = (performance.now() - this.startedAt).toFixed(1)
+        colorTrace(`AutoEssentialCookies executed in ${time}ms`, 'lightgreen')
+
+        function colorTrace(msg, color) {
+            // https://stackoverflow.com/questions/9332979/change-console-log-message-color#10769621
+            console.log("%c" + msg, "color:" + color + ";font-weight:bold;");
+        }
     }
 }
 
 class ProcessManager {
     constructor() {
         this.ProcessState = new ProcessState()
-        this.CommandExecutor = new CommandExecutor()
-        this.CommandProvider = new CommandSequenceProvider(this.ProcessState)
+        this.CommandExecutor = new CommandExecutor(this.ProcessState)
     }
 
     async init() {
-        this.ProcessState.commandsToBeAdded.push([[], this.CommandProvider.get()])
-        this.CommandExecutor.addCommandQueueItem(...this.ProcessState.commandsToBeAdded.shift())
-        do {
-            this.ProcessState.result = this.CommandExecutor.setNextCommandSequence()
+        this.ProcessState.setStartingTime()
+        this.ProcessState.addCommandSequence()
+        while (this.ProcessState.nextCommands.length > 0) {
             await this.CommandExecutor.executeCommands()
-            const nextCommandSequence = this.ProcessState.commandsToBeAdded.shift()
-            if(!nextCommandSequence) break
-            this.CommandExecutor.addCommandQueueItem(...nextCommandSequence)
-        } while (this.CommandExecutor.commandQueue.hasNext())
+        }
     }
 }
 
