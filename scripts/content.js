@@ -357,24 +357,33 @@ class CheckState extends Command {
     }
 
     async execute() {
-        if (this.result.length === 0 && this.state.bannersInProgress === -1) {
-            sessionStorage.setItem('AEC', 'done')
-            return
-        }
-        else if (this.result.length === 0) return
         await new Promise((resolve) => {
-            const completedBanners = this.result.filter(banner => banner.completed)
-            this.state.bannersInProgress -= completedBanners.length
-            if (this.state.bannersInProgress === 0) {
-                sessionStorage.setItem('AEC', 'done')
-                createToast()
-                return
-            }
-            if (!this.state.addedCommands) this.addSubsequentCommands()
+            this.handleNoResult() ? resolve() : this.handleResult()
+            if (!this.state.addedCommands && this.state.bannersInProgress > 0)
+                this.addSubsequentCommands()
             resolve()
         })
         // wait for DOM to update after click
         await timeout()
+    }
+
+    handleNoResult() {
+        if (this.state.result.length === 0 && this.state.bannersInProgress === -1) {
+            sessionStorage.setItem('AEC', 'done')
+            return true
+        }
+        else if (this.state.result.length === 0) return true
+        return false
+    }
+
+    handleResult() {
+        const completedBanners = this.state.result.filter(banner => banner.completed)
+        this.state.bannersInProgress -= completedBanners.length
+        if (this.state.bannersInProgress === 0) {
+            sessionStorage.setItem('AEC', 'done')
+            this.state.printTime()
+            createToast()
+        }
     }
 
     addSubsequentCommands() {
