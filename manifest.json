@@ -7,7 +7,7 @@
   "host_permissions": ["<all_urls>"],
   "content_scripts": [{
     "matches": ["http://*/*", "https://*/*"],
-    "js": ["scripts/content.js"],
+    "js": ["dist/contentScript.js"],
     "all_frames": true
   }]
 }
