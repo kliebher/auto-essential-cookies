@@ -3,8 +3,8 @@ import axios from 'axios'
 const LOCAL_STORAGE_KEY = 'AEC_testResult'
 const TEST_ENGINE_URL = 'http://localhost:3000'
 
-const testResultDefault: { actual: string[], time: string } = {
-    "actual": [],
+const testResultDefault: { clicked: string[], time: string } = {
+    "clicked": [],
     "time": ""
 }
 
@@ -27,7 +27,7 @@ export class TestResultHandler  {
         const current = localStorage.getItem(this.key)
         const parsed = current ? JSON.parse(current) : testResultDefault
         if (parsed) {
-            parsed.actual.push({xpath: xpath, text: element.innerText})
+            parsed.clicked.push({xpath: xpath, text: element.innerText})
         }
         localStorage.setItem(this.key, JSON.stringify(parsed))
     }
@@ -44,7 +44,6 @@ export class TestResultHandler  {
     async sendResults() {
         const current = localStorage.getItem(this.key)
         const parsed = current ? JSON.parse(current) : testResultDefault
-        parsed.host = window.location.host
         parsed.time = (performance.now() - parsed.time).toFixed(2)
         await axios.post(TEST_ENGINE_URL, parsed)
     }
