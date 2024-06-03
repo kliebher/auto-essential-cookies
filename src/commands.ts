@@ -86,12 +86,14 @@ class IdentifyUniqueRoots extends Command {
     public state: ProcessState
     private invalidStartTags: Set<string>
     private invalidRootTags: Set<string>
+    private invalidKnownIds: Set<string>
 
     constructor(state: ProcessState) {
         super()
         this.state = state
         this.invalidStartTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta', 'strong']);
         this.invalidRootTags = new Set(['p', 'span', 'h2', 'h3', 'h4']);
+        this.invalidKnownIds = new Set(['react-root', 'app', 'ng-app'])
     }
 
     public execute(): Promise<void> {
@@ -133,6 +135,7 @@ class IdentifyUniqueRoots extends Command {
     private isValidRoot(node: HTMLElement, topLevelParentNode: HTMLElement | null): boolean {
         if (!topLevelParentNode) return false
         if (this.invalidRootTags.has(topLevelParentNode.tagName.toLowerCase())) return false
+        if (this.invalidKnownIds.has(topLevelParentNode.id)) return false
         return !(this.state.result.includes(topLevelParentNode) && node !== topLevelParentNode);
     }
 }
