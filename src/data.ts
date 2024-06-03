@@ -1,5 +1,5 @@
 const COOKIE_QUERY = 'span, p, h3, h2, h4, aside, [id*="policy"], [id*="consent"], [id*="message-container"]' +
-    '[id*="cookie"], [aria-label*="policy"], [aria-label*="consent"], [aria-label*="cookie"], [class*="message-container"]'
+    '[id*="cookie"], [aria-label*="policy"], [aria-label*="consent"], [aria-label*="cookie"], [class*="message-container"], [id*=gdpr]'
 
 const KEYWORDS = {
     'DENY': [
@@ -61,7 +61,6 @@ const KNOWN_IDENTIFIERS = {
         "#didomi-notice-learn-more-button",
         "#didomi-notice-do-not-sell-button",
         "#truste-show-consent",
-        ".cmpmorelink",
         ".cmptxt_btn_custom",
         "[data-testid='uc-customize-anchor']",
         "[data-testid='uc-more-button']",
