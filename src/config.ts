@@ -9,8 +9,8 @@ const ConfirmKeywordMatcher = new ConfirmKeywords()
 
 const INITIAL_TAB_KEYWORDS: Array<KeywordMatcher> = [
     DenyKeywordMatcher,
+    ConfirmKeywordMatcher,
     SettingsKeywordMatcher,
-    ConfirmKeywordMatcher
 ]
 
 const SETTINGS_TAB_KEYWORDS: Array<KeywordMatcher> = [
@@ -19,7 +19,7 @@ const SETTINGS_TAB_KEYWORDS: Array<KeywordMatcher> = [
 ]
 
 const TESTING = true
-const LOADING_TIMEOUT: number = 500 //ms
+const LOADING_TIMEOUT: number = 200 //ms
 const SESSION_STORAGE = new SessionStorageHandler()
 const RESULT_HANDLER = TESTING ? new TestResultHandler() : null
 
