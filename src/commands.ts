@@ -192,7 +192,7 @@ class DetectAboModel extends Command {
     }
 
     private isAboModel(root: HTMLElement) {
-        const aboModelKeywords = ['mit werbung', 'with advertising', "mit tracking"]
+        const aboModelKeywords = ['mit werbung', 'with advertising', "mit tracking", "ohne Werbetracking"]
         const rootInnerText = root.innerText.toLowerCase()
         return aboModelKeywords.some(keyword => rootInnerText.includes(keyword))
     }
