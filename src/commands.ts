@@ -229,12 +229,7 @@ class FindActionNodes extends Command {
             const key =
                 this.isLink(result) ? 'links'
                 : this.isButton(result) ? 'buttons'
-                : this.isDiv(result) ? 'divs'
-                : null
-            if (!key) {
-                console.log('UNKNOWN ACTION ELEMENT: ', result)
-                continue
-            }
+                : 'uncommon'
             banner.actionElements[key] = [result]
             banner.actionElements['checkboxes'] = this.getCheckboxes(banner.root) as HTMLInputElement[]
             return true
@@ -250,15 +245,11 @@ class FindActionNodes extends Command {
         return element.tagName === 'BUTTON'
     }
 
-    private isDiv(element: HTMLElement): boolean {
-        return element.tagName === 'DIV'
-    }
-
     private getActionNodes(banner: CookieBanner): void {
         banner.actionElements['buttons'] = this.getButtons(banner.root)
         banner.actionElements['checkboxes'] = this.getCheckboxes(banner.root) as HTMLInputElement[]
         banner.actionElements['links'] = this.getLinks(banner.root)
-        banner.actionElements['divs'] = this.getDivs(banner.root) as HTMLElement[]
+        banner.actionElements['uncommon'] = this.getDivs(banner.root) as HTMLElement[]
     }
 
     private getButtons(root: HTMLElement): Array<HTMLButtonElement> {
@@ -307,10 +298,10 @@ class ClassifyActionNodes extends Command {
     }
 
     private findMatchingKeywords(banner: CookieBanner) {
-        const actionNodesList: HTMLElement[][] = [banner.actionElements.buttons, banner.actionElements.links, banner.actionElements.divs]
+        const actionNodesList: HTMLElement[][] = [banner.actionElements.buttons, banner.actionElements.links, banner.actionElements.uncommon]
         for (const keywords of this.keywordLists) {
             for (const actionNodes of actionNodesList) {
-                if (actionNodes.length === 0) continue
+                if (!actionNodes || actionNodes.length === 0) continue
                 const match = this.getFirstMatch(actionNodes, keywords)
                 if (match && !this.actionAlreadyExecuted(match) && !this.isFooterContent(match)) {
                     const result = new ActionClassifyResult(match, keywords.type)
