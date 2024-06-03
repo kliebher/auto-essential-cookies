@@ -406,7 +406,6 @@ class CheckState extends Command {
 
     private handleNoResult() {
         if (this.state.result.length === 0 && this.state.bannersInProgress === -1) {
-            SESSION_STORAGE.set('AEC', 'done')
             this.state.printTime()
             return true
         }
