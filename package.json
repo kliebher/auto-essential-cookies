@@ -4,13 +4,21 @@
   "description": "",
   "main": "src/contentScript.ts",
   "scripts": {
+    "test_server": "node testing/server.cjs",
+    "test": "npx jest",
     "build": "esbuild src/contentScript.ts --bundle --outfile=dist/contentScript.js --platform=browser --format=iife --target=es2015"
   },
   "author": "kliebher",
   "license": "ISC",
   "devDependencies": {
+    "@types/jest": "^29.5.12",
     "axios": "^1.7.2",
+    "cors": "^2.8.5",
     "esbuild": "^0.21.4",
+    "express": "^4.19.2",
+    "jest": "^29.7.0",
+    "jest-puppeteer": "^10.0.1",
+    "puppeteer": "^22.10.0",
     "typescript": "^5.4.5"
   },
   "type": "module"
