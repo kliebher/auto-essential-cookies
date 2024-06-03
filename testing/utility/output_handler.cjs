@@ -51,35 +51,14 @@ class OutputHandler {
         fs.writeFileSync(this.fullPath, JSON.stringify(updated, null, 2))
     }
 
-    handleMissingKey(file, key, _default = {}) {
-        if (!file[key]) {
-            file[key] = _default
-        }
-    }
-
-    handleArrayValue(entry, property, value) {
-        if (entry[property] && Array.isArray(entry[property])) {
-            entry[property].push(...value)
-        } else {
-            this.handleValue(entry, property, value)
-        }
-    }
-
-    handleValue(entry, property, value) {
-        entry[property] = value
-    }
-
-    updateOutputFile(key, property, value) {
+    updateOutputFile(key, update) {
         const file = this.outputFile
-        this.handleMissingKey(file, key)
-        Array.isArray(value)
-            ? this.handleArrayValue(file[key], property, value)
-            : this.handleValue(file[key], property, value)
+        file[key] = update
         this.outputFile = file
     }
 
-    entryExists(key) {
-        return !!this.outputFile[key]
+    getResult(key) {
+        return this.outputFile[key]
     }
 }
 
