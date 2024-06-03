@@ -172,7 +172,7 @@ class DetectAboModel extends Command {
     }
 
     public execute(): Promise<void> {
-        return new Promise<void>((resolve) => {
+        return new Promise<void>(async (resolve) => {
             if (this.state.result.length === 0) resolve()
             for (let i = 0; i < this.state.result.length; i++) {
                 const current = this.state.result[i]
@@ -180,8 +180,10 @@ class DetectAboModel extends Command {
                     this.state.removeResultAtIndex(i--)
                     if (this.state.result.length === 0) {
                         utility.createToast('Abonnement Banner')
-                        RESULT_HANDLER?.sendResults()
+                        await RESULT_HANDLER?.sendResults()
+                        this.state.printTime()
                         SESSION_STORAGE.set('AEC', 'done')
+                        return
                     }
                 }
             }
