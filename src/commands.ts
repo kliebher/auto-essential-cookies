@@ -1,15 +1,14 @@
 import { type ProcessState } from './process'
-import { SESSION_STORAGE, RESULT_HANDLER, SETTINGS_TAB_KEYWORDS, INITIAL_TAB_KEYWORDS } from "./config";
-import { SettingsKeywordMatcher } from "./config";
-import * as utility from "./utility";
-import { CookieBanner, ActionClassifyResult, CookieBannerActionType, CookieBannerAction, type StateResult } from "./types";
+import { BASIC_KEYWORDS, RESULT_HANDLER, SETTINGS_KEYWORDS, SettingsKeywordMatcher, UPDATE_TIMEOUT } from "./config";
+import * as util from "./utility";
 import { type KeywordMatcher } from "./keywords";
-import { COOKIE_QUERY, KNOWN_IDENTIFIERS } from "./data";
+import { ABONNEMENT_KEYWORDS, COOKIE_QUERY } from "./data";
+import { AKnownIdentifierMatcher, KNOWN_IDENTIFIER_MATCHER } from "./known_identifier";
+import { ActionClassifyResult, CookieBanner, CookieBannerAction, CookieBannerActionType, type StateResult} from "./types";
 
 abstract class Command {
     abstract execute(): Promise<void>
 }
-
 
 class FindCookieRelatedNodes extends Command {
     public state: ProcessState
@@ -27,9 +26,22 @@ class FindCookieRelatedNodes extends Command {
 
     public execute(): Promise<void> {
         return new Promise<void>((resolve) => {
-            this.findNodes()
+            const knownRootExists = this.findKnownRoots()
+            if(!knownRootExists) this.findNodes()
             resolve()
         })
+    }
+
+    private findKnownRoots() {
+        for (const matcher of KNOWN_IDENTIFIER_MATCHER) {
+            const root = matcher.findRoot()
+            if (root && !this.state.processedRoots.includes(root)) {
+                this.state.result.push(root)
+                this.state.foundKnownMatcher.set(root, matcher)
+                return true
+            }
+        }
+        return false
     }
 
     private findNodes() {
@@ -57,7 +69,7 @@ class FindCookieRelatedNodes extends Command {
         if (!node.innerText) return false
         const nodeInnerText = node.innerText.toLowerCase();
         if (this.invalidHTMLTags.has(node.tagName.toLowerCase())) return false
-        return nodeInnerText.includes('cookie')
+        return nodeInnerText.includes('cookies')
     }
 
     private handleShadowRoot(node: HTMLElement): void {
@@ -98,10 +110,10 @@ class IdentifyUniqueRoots extends Command {
 
     public execute(): Promise<void> {
         return new Promise<void>((resolve) => {
-            if (this.state.result.length === 0) resolve()
+            if (this.state.result.length === 0) return resolve()
             for (let i = 0; i < this.state.result.length; i++) {
                 const node = this.state.result[i];
-                if (!utility.isHTMLElement(node)) {
+                if (!util.isHTMLElement(node)) {
                     continue
                 }
                 const topLevelParentNode = this.identifyTopLevelParentNode(node);
@@ -109,9 +121,10 @@ class IdentifyUniqueRoots extends Command {
                     this.state.result[i] = topLevelParentNode;
                     continue
                 }
-                this.state.removeResultAtIndex(i--)
+                this.state.removeResultByIndex(i--)
 
             }
+            this.checkForChild()
             resolve()
         })
     }
@@ -138,6 +151,18 @@ class IdentifyUniqueRoots extends Command {
         if (this.invalidKnownIds.has(topLevelParentNode.id)) return false
         return !(this.state.result.includes(topLevelParentNode) && node !== topLevelParentNode);
     }
+
+    private checkForChild() {
+        if (this.state.result.length <= 1) return
+        for (let i = 0; i < this.state.result.length; i++) {
+            for (let ii = 1; ii < this.state.result.length; ii++) {
+                const a = this.state.result[i]
+                const b = this.state.result[ii]
+                if (!util.isHTMLElement(a) || !util.isHTMLElement(b)) continue
+                if (a.contains(b)) this.state.removeResultByIndex(ii)
+            }
+        }
+    }
 }
 
 class CreateCookieBannerObject extends Command {
@@ -150,9 +175,9 @@ class CreateCookieBannerObject extends Command {
 
     public execute(): Promise<void> {
         return new Promise<void>((resolve) => {
-            if (this.state.result.length === 0) resolve()
+            if (this.state.result.length === 0) return resolve()
             this.state.result.forEach((node, index) => {
-                if (utility.isHTMLElement(node)) this.parseCookieBanner(node, index)
+                if (util.isHTMLElement(node)) this.parseCookieBanner(node, index)
             })
             resolve()
         })
@@ -173,18 +198,20 @@ class DetectAboModel extends Command {
 
     public execute(): Promise<void> {
         return new Promise<void>(async (resolve) => {
-            if (this.state.result.length === 0) resolve()
+            if (this.state.result.length === 0) return resolve()
             for (let i = 0; i < this.state.result.length; i++) {
                 const current = this.state.result[i]
-                if (utility.isCookieBanner(current) && this.isAboModel(current.root)) {
-                    this.state.removeResultAtIndex(i--)
+                if (!util.isCookieBanner(current)) continue
+                if (this.isAboModel(current.root)) {
+                    this.state.removeResultByIndex(i--)
                     if (this.state.result.length === 0) {
-                        utility.createToast('Abonnement Banner')
                         await RESULT_HANDLER?.sendResults()
-                        this.state.printTime()
-                        SESSION_STORAGE.set('AEC', 'done')
+                        this.state.finishProcess(true, 'Abo Model')
                         return
                     }
+                }
+                else if (this.state.foundKnownMatcher.get(current.root) !== undefined) {
+                    current.root.style.opacity = '0'
                 }
             }
             resolve()
@@ -192,7 +219,7 @@ class DetectAboModel extends Command {
     }
 
     private isAboModel(root: HTMLElement) {
-        const aboModelKeywords = ['mit werbung', 'with advertising', "mit tracking", "ohne Werbetracking"]
+        const aboModelKeywords = ABONNEMENT_KEYWORDS
         const rootInnerText = root.innerText.toLowerCase()
         return aboModelKeywords.some(keyword => rootInnerText.includes(keyword))
     }
@@ -208,64 +235,75 @@ class FindActionNodes extends Command {
 
     public execute(): Promise<void> {
         return new Promise<void>((resolve) => {
-            if (this.state.result.length === 0) resolve()
+            if (this.state.result.length === 0) return resolve()
             for (let i = 0; i < this.state.result.length; i++) {
                 const current = this.state.result[i]
-                if (!utility.isCookieBanner(current)) continue
-                const hasKnownActionElement = this.handleKnownIdentifiers(current)
-                if (!hasKnownActionElement) this.getActionNodes(current)
+                if (!util.isCookieBanner(current)) continue
+                const hasKnownActions = this.findKnownActions(current)
+                if (hasKnownActions) {
+                    current.actionElements['checkboxes'] = this.getElementsByQuery(current.root, 'input[type=checkbox]')
+                } else this.getActionNodes(current)
                 if (!this.hasActionElements(current)) {
-                    this.state.removeResultAtIndex(i--)
+                    this.state.removeResultByIndex(i--)
                 }
             }
             resolve()
         })
     }
 
-    private handleKnownIdentifiers(banner: CookieBanner): boolean {
-        for (const selector of Object.values(KNOWN_IDENTIFIERS).flat()) {
-            const result = banner.root.querySelector(selector) as HTMLElement | null
-            if (!result) continue
-            const key =
-                this.isLink(result) ? 'links'
-                : this.isButton(result) ? 'buttons'
-                : 'uncommon'
-            banner.actionElements[key] = [result]
-            banner.actionElements['checkboxes'] = this.getCheckboxes(banner.root) as HTMLInputElement[]
+    private findKnownActions(banner: CookieBanner): boolean {
+        const matcher = this.state.foundKnownMatcher.get(banner.root)
+        const isKnownRoot = matcher !== undefined
+        if (!isKnownRoot || !matcher) return false
+        const {
+            DENY,
+            CONFIRM,
+            SETTINGS
+        } = CookieBannerActionType
+
+        const hasDenyAction = this.findKnownAction(banner, matcher, 'findDeny', DENY)
+        if (hasDenyAction) return true
+
+        const hasConfirmAction = this.findKnownAction(banner, matcher, 'findConfirm', CONFIRM)
+        if (hasConfirmAction) return true
+
+        if (this.state.basicSearch) {
+            const hasSettingsAction = this.findKnownAction(banner, matcher, 'findSettings', SETTINGS)
+            if (hasSettingsAction) return true
+        }
+        return false
+    }
+
+    findKnownAction(banner: CookieBanner, matcher: AKnownIdentifierMatcher, funcName: string, type: CookieBannerActionType) {
+        // @ts-ignore
+        const actionElement = matcher[funcName](banner)
+        if (actionElement && !this.state.clickedElements.includes(actionElement)) {
+            banner.actionElements[this.getKeyByElement(actionElement)] = [actionElement]
+            this.state.foundKnownAction.set(actionElement, type)
             return true
         }
         return false
     }
 
-    private isLink(element: HTMLElement): boolean {
-        return element.tagName === 'A'
-    }
-
-    private isButton(element: HTMLElement): boolean {
-        return element.tagName === 'BUTTON'
+    private getKeyByElement(element: HTMLElement): string {
+        const tag = element.tagName.toLowerCase()
+        return tag === 'a'
+            ? 'links'
+            : tag === 'button'
+                ? 'buttons'
+                : 'uncommon'
     }
 
     private getActionNodes(banner: CookieBanner): void {
-        banner.actionElements['buttons'] = this.getButtons(banner.root)
-        banner.actionElements['checkboxes'] = this.getCheckboxes(banner.root) as HTMLInputElement[]
-        banner.actionElements['links'] = this.getLinks(banner.root)
-        banner.actionElements['uncommon'] = this.getDivs(banner.root) as HTMLElement[]
+        const root = banner.root
+        banner.actionElements['buttons'] = this.getElementsByQuery(root, 'button')
+        banner.actionElements['checkboxes'] = this.getElementsByQuery(root, 'input[type=checkbox]')
+        banner.actionElements['links'] = this.getElementsByQuery(root, 'a')
+        banner.actionElements['uncommon'] = this.getElementsByQuery(root, '[aria-label*="ablehnen"')
     }
 
-    private getButtons(root: HTMLElement): Array<HTMLButtonElement> {
-        return Array.from(root.querySelectorAll('button'));
-    }
-
-    private getCheckboxes(root: HTMLElement): Array<Element> {
-        return Array.from(root.querySelectorAll('input[type="checkbox"]'));
-    }
-
-    private getLinks(root: HTMLElement): Array<HTMLAnchorElement> {
-        return Array.from(root.querySelectorAll('a'));
-    }
-
-    private getDivs(root: HTMLElement) {
-        return Array.from(root.querySelectorAll('div[aria-label*="ablehnen"]'))
+    private getElementsByQuery(root: HTMLElement, query: string): HTMLElement[] {
+        return Array.from(root.querySelectorAll(query)) as HTMLElement[]
     }
 
     private hasActionElements(banner: CookieBanner): boolean {
@@ -285,32 +323,52 @@ class ClassifyActionNodes extends Command {
 
     public execute(): Promise<void> {
         return new Promise<void>((resolve) => {
-            if (this.state.result.length === 0) resolve()
+            if (this.state.result.length === 0) return resolve()
             for (let i = 0; i < this.state.result.length; i++) {
                 const current = this.state.result[i]
-                if (!utility.isCookieBanner(current)) continue
-                const result = this.findMatchingKeywords(current)
-                result ? this.createBannerAction(current, result) : this.state.removeResultAtIndex(i--)
+                if (!util.isCookieBanner(current)) continue
+                let result = this.handleKnownActions(current)
+                if (!result) {
+                    result = this.findMatchingKeywords(current)
+                }
+                result ? this.createBannerAction(current, result) : this.state.removeResultByIndex(i--)
             }
             this.state.setBannerInProgress(this.state.result.length)
             resolve()
         })
     }
 
-    private findMatchingKeywords(banner: CookieBanner) {
+    private handleKnownActions(banner: CookieBanner) {
+        const actionNodes = Object.values(banner.actionElements).flat()
+        for (const actionNode of actionNodes) {
+            const knownActionType = this.state.foundKnownAction.get(actionNode)
+            if (knownActionType !== undefined && !this.state.clickedElements.includes(actionNode)) {
+                return new ActionClassifyResult(actionNode, knownActionType)
+            }
+        }
+        return null
+    }
+
+    private findMatchingKeywords(banner: CookieBanner): ActionClassifyResult | null {
         const actionNodesList: HTMLElement[][] = [banner.actionElements.buttons, banner.actionElements.links, banner.actionElements.uncommon]
         for (const keywords of this.keywordLists) {
             for (const actionNodes of actionNodesList) {
                 if (!actionNodes || actionNodes.length === 0) continue
                 const match = this.getFirstMatch(actionNodes, keywords)
-                if (match && !this.actionAlreadyExecuted(match) && !this.isFooterContent(match)) {
-                    const result = new ActionClassifyResult(match, keywords.type)
-                    this.checkMultipleKeywordsMatch(result)
-                    return result
-                }
+                if (!this.isValidMatch(match, keywords.type)) continue
+                return new ActionClassifyResult(match!, keywords.type)
             }
         }
         return null
+    }
+
+    private isValidMatch(match: HTMLElement | null, type: CookieBannerActionType): boolean {
+        if (!match) return false
+        if (match.hasAttribute('type') && match.getAttribute('type') === 'submit') return false
+        console.log(match)
+        if (this.isFooterContent(match)) return false
+        if (this.actionAlreadyExecuted(match)) return false
+        return !this.isFalsePositive(match, type);
     }
 
     private isFooterContent(node: HTMLElement): boolean {
@@ -330,24 +388,19 @@ class ClassifyActionNodes extends Command {
         return this.state.clickedElements.includes(match)
     }
 
-    private checkMultipleKeywordsMatch(result: ActionClassifyResult): void {
-        if (result.actionType === CookieBannerActionType.DENY) {
-            const keywords = SettingsKeywordMatcher
-            const multipleMatch = this.getFirstMatch(result.node, keywords)
-            if (multipleMatch) result.updateActionType(keywords.type)
+    private isFalsePositive(match: HTMLElement, matchedKeywordType: CookieBannerActionType) {
+        // checks if a button text combines settings and deny -> leads to second banner layer
+        if (matchedKeywordType === CookieBannerActionType.DENY) {
+            const multipleMatch = this.getFirstMatch(match, SettingsKeywordMatcher)
+            if (multipleMatch) return true
         }
+        return false
     }
 
     private createBannerAction(banner: CookieBanner, result: ActionClassifyResult): void {
         const action = new CookieBannerAction(result.node, result.actionType)
-        this.state.clickedElements.push(result.node)
         banner.actions.push(action)
-        // this.hideCookieBanner(banner)
     }
-
-    // private hideCookieBanner(banner: CookieBanner) {
-    //     banner.root.style.opacity = '0'
-    // }
 }
 
 class ExecuteAction extends Command {
@@ -360,9 +413,9 @@ class ExecuteAction extends Command {
 
     public execute(): Promise<void> {
         return new Promise<void>(async (resolve) => {
-            if (this.state.result.length === 0) resolve()
+            if (this.state.result.length === 0) return resolve()
             for (const result of this.state.result) {
-                if (utility.isCookieBanner(result)) {
+                if (util.isCookieBanner(result)) {
                     this.unselectCheckboxes(result.actionElements.checkboxes as HTMLInputElement[])
                     await this.executeAction(result)
                 }
@@ -374,8 +427,10 @@ class ExecuteAction extends Command {
     private async executeAction(banner: CookieBanner) {
         const nextAction = banner.actions.shift()
         if (nextAction) {
-            banner.completed = await nextAction.execute()
+            await nextAction.execute()
+            banner.completed = nextAction.isBannerCompleted()
             banner.executedActions.push(nextAction)
+            this.state.clickedElements.push(nextAction.element)
         }
     }
 
@@ -394,43 +449,67 @@ class CheckState extends Command {
 
     public execute(): Promise<void> {
         return new Promise<void>(async (resolve) => {
-            this.handleNoResult() ? resolve() : this.handleResult()
-            if (!this.state.addedCommands && this.state.bannersInProgress > 0) {
+            const processDone = this.handleNoResult()
+            if (processDone) resolve()
+
+            this.handleResult()
+
+            if (!this.state.addedCommands) {
                 this.addSubsequentCommands()
                 // wait for DOM to update after click
-                await utility.timeout(500)
+                await util.timeout(UPDATE_TIMEOUT)
             }
+
+            this.handleFailedSameRootSearch()
             resolve()
         })
     }
 
     private handleNoResult() {
-        if (this.state.result.length === 0 && this.state.bannersInProgress === -1) {
-            this.state.printTime()
+        if (!this.hasResults() && !this.foundBanner()) {
+            this.state.finishProcess(false)
             return true
         }
-        else if (this.state.result.length === 0) return true
-        return false
+        else return this.state.result.length === 0;
+    }
+
+    private foundBanner() {
+        return this.state.bannersInProgress !== -1
+    }
+
+    private hasResults() {
+        return this.state.result.length > 0
     }
 
     private handleResult() {
-        const completedBanners = this.state.result
-            .filter(banner => utility.isCookieBanner(banner) && banner.completed)
+        const completedBanners = this.getResult(true)
         this.state.bannersInProgress -= completedBanners.length
         if (this.state.bannersInProgress === 0) {
-            SESSION_STORAGE.set('AEC', 'done')
-            this.state.printTime()
-            utility.createToast()
+            this.state.finishProcess(true, 'Cookies Managed!')
         }
     }
 
+    private getResult(completed: boolean) {
+        return this.state.result.filter((banner) => {
+            return util.isCookieBanner(banner) && banner.completed === completed
+        })
+    }
+
     private addSubsequentCommands() {
-        this.state.result.filter(banner => utility.isCookieBanner(banner) && !banner.completed)
-            .forEach(bannerInProgress => {
-                this.state.addCommandSequence(true, true, [bannerInProgress])
-            })
+        const notCompleted = this.getResult(false)
+
+        notCompleted.forEach(bannerInProgress => {
+            this.state.addCommandSequence(true, true, [bannerInProgress])
+        })
+
         this.state.addCommandSequence(false, true)
         this.state.addedCommands = true
+    }
+
+    private handleFailedSameRootSearch() {
+        if (this.state.sameRootSearch && this.state.currentSameRoot) {
+            this.state.processedRoots.push(this.state.currentSameRoot)
+        }
     }
 }
 
@@ -440,11 +519,11 @@ class CommandSequenceProvider {
 
     static get(state: ProcessState, sameRoot: boolean = false, settings: boolean = false) {
         const sequence = sameRoot ? this.COMMAND_SEQUENCE_SAME_ROOT : this.COMMAND_SEQUENCE_FULL_DOM
-        const keywords: Array<KeywordMatcher> = settings ? SETTINGS_TAB_KEYWORDS : INITIAL_TAB_KEYWORDS
-        return sequence(keywords, state)
+        const keywords: Array<KeywordMatcher> = settings ? SETTINGS_KEYWORDS : BASIC_KEYWORDS
+        return sequence(state, keywords)
     }
 
-    static COMMAND_SEQUENCE_FULL_DOM = (keywords: KeywordMatcher[], state: ProcessState) => {
+    static COMMAND_SEQUENCE_FULL_DOM = (state: ProcessState, keywords: KeywordMatcher[]) => {
         return [
             new FindCookieRelatedNodes(state),
             new IdentifyUniqueRoots(state),
@@ -457,7 +536,7 @@ class CommandSequenceProvider {
         ]
     }
 
-    static COMMAND_SEQUENCE_SAME_ROOT = (keywords: KeywordMatcher[], state: ProcessState) => {
+    static COMMAND_SEQUENCE_SAME_ROOT = (state: ProcessState, keywords: KeywordMatcher[]) => {
         return [
             new FindActionNodes(state),
             new ClassifyActionNodes(state, keywords),
@@ -477,13 +556,22 @@ class CommandExecutor {
     public async executeCommands() {
         const next = this.state.commandQueue.getNext()
         if (next) {
-            this.state.result = next.initialResult
+            this.updateState(next)
             for (const command of next.sequence) {
-                // const start = performance.now()
+                const start = performance.now()
                 await command.execute()
-                // utility.colorTrace(`[${command.constructor.name}] executed in ${(performance.now() - start).toFixed(2)}ms`, "lightgreen")
-                // console.dir([...this.state.result])
+                util.colorTrace(`[${command.constructor.name}](${window.location.host}) executed in ${(performance.now() - start).toFixed(2)}ms`, "lightgreen")
+                console.dir([...this.state.result])
             }
+        }
+    }
+
+    private updateState(next: CommandQueueItem) {
+        this.state.result = next.initialResult
+        this.state.sameRootSearch = next.sameRoot
+        this.state.basicSearch = !next.settings
+        if (this.state.sameRootSearch && util.isCookieBanner(next.initialResult[0])) {
+            this.state.currentSameRoot = next.initialResult[0].root
         }
     }
 }
@@ -491,10 +579,14 @@ class CommandExecutor {
 class CommandQueueItem {
     public readonly sequence: Command[]
     public readonly initialResult: StateResult
+    public readonly sameRoot: boolean
+    public readonly settings: boolean
 
-    constructor(sequence: Command[], startingPoint: StateResult) {
+    constructor(sequence: Command[], startingPoint: StateResult, sameRoot: boolean, settings: boolean) {
         this.sequence = sequence
         this.initialResult = startingPoint
+        this.sameRoot = sameRoot
+        this.settings = settings
     }
 }
 
@@ -505,8 +597,8 @@ class CommandQueue {
         this.commands = []
     }
 
-    public addCommand(sequence: Command[], initialResult: StateResult) {
-        const queueItem = new CommandQueueItem(sequence, initialResult)
+    public addCommand(sequence: Command[], initialResult: StateResult, sameRoot: boolean, settings: boolean) {
+        const queueItem = new CommandQueueItem(sequence, initialResult, sameRoot, settings)
         this.commands.push(queueItem)
     }
 
@@ -516,7 +608,6 @@ class CommandQueue {
 
     public hasNext(): boolean {
         return this.commands.length > 0
-
     }
 }
 
@@ -524,5 +615,6 @@ class CommandQueue {
 export {
     CommandSequenceProvider,
     CommandExecutor,
-    CommandQueue
+    CommandQueue,
+    Command
 }

@@ -1,7 +1,9 @@
-import { TESTING, RESULT_HANDLER } from './config'
-import { CommandExecutor, CommandQueue, CommandSequenceProvider} from "./commands";
-import { type StateResult} from "./types";
+import { TESTING, RESULT_HANDLER, SESSION_STORAGE} from './config'
+import { type Command, CommandExecutor, CommandQueue, CommandSequenceProvider } from "./commands";
+import { CookieBannerActionType, type StateResult } from "./types";
 import { colorTrace } from "./utility";
+import { type AKnownIdentifierMatcher } from './known_identifier'
+import * as utility from "./utility";
 
 
 export class ProcessManager {
@@ -15,52 +17,65 @@ export class ProcessManager {
 
     async init() {
         if (TESTING) RESULT_HANDLER?.setStartTime()
-        this.state.setStartingTime()
-        this.state.addCommandSequence()
-        while (this.state.commandQueue.hasNext()) {
-            await this.commandExecutor.executeCommands()
-        }
+        this.state.setExecutionStart()
+        const initSequence = CommandSequenceProvider.get(this.state)
+        this.state.commandQueue.addCommand(initSequence, [], false, false)
+        await new Promise<void>(async (resolve) => {
+            while (this.state.commandQueue.hasNext()) {
+                await this.commandExecutor.executeCommands()
+            }
+            resolve()
+        })
     }
 }
 
 
 export class ProcessState {
-    bannersInProgress: number
-    result: StateResult
-    addedCommands: boolean
+    bannersInProgress: number = -1
+    startedAt: number = -1
+    addedCommands: boolean = false
+    basicSearch: boolean = true
+    sameRootSearch: boolean = false
+    clickedElements: Array<HTMLElement> = []
+    result: StateResult = []
+    processedRoots: HTMLElement[] = []
     commandQueue: CommandQueue
-    clickedElements: Array<HTMLElement>
-    startedAt: number
+    foundKnownMatcher: Map<HTMLElement, AKnownIdentifierMatcher>
+    foundKnownAction: Map<HTMLElement, CookieBannerActionType>
+    currentSameRoot: HTMLElement | null = null
 
     constructor() {
-        this.bannersInProgress = -1
-        this.result = []
-        this.addedCommands = false
         this.commandQueue = new CommandQueue()
-        this.clickedElements = []
-        this.startedAt = -1
+        this.foundKnownMatcher = new Map()
+        this.foundKnownAction = new Map()
     }
 
-    public removeResultAtIndex(index: number) {
+    public removeResultByIndex(index: number) {
         this.result.splice(index, 1)
     }
 
     addCommandSequence(sameRoot = false, settings = false, initialResult: StateResult = []) {
-        const sequence = CommandSequenceProvider.get(this, sameRoot, settings)
-        this.commandQueue.addCommand(sequence, initialResult)
+        const sequence: Command[] = CommandSequenceProvider.get(this, sameRoot, settings)
+        this.commandQueue.addCommand(sequence, initialResult, sameRoot, settings)
     }
 
-    setStartingTime() {
+    setExecutionStart() {
         this.startedAt = performance.now()
     }
 
-    printTime() {
+    printExecutionTime() {
         const time = (performance.now() - this.startedAt).toFixed(1)
         colorTrace(`Cookie Banner processed in ${time}ms`, 'lightgreen')
     }
 
     setBannerInProgress(bannersInProgress: number) {
         this.bannersInProgress = this.bannersInProgress === -1 ? bannersInProgress : this.bannersInProgress
+    }
+
+    finishProcess(printTime?: boolean, toastMsg?: string) {
+        if (toastMsg) utility.createToast(toastMsg)
+        // if (printTime) this.printExecutionTime()
+        SESSION_STORAGE.set('AEC', 'done')
     }
 }
 
