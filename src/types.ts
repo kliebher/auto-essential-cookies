@@ -17,10 +17,6 @@ class ActionClassifyResult {
         this.node = node
         this.actionType = actionType
     }
-
-    public updateActionType(actionType: CookieBannerActionType) {
-        this.actionType = actionType
-    }
 }
 
 class CookieBanner {
@@ -40,25 +36,31 @@ class CookieBanner {
 }
 
 class CookieBannerAction {
-    private readonly element: HTMLElement
+    private readonly _element: HTMLElement
     private readonly type: CookieBannerActionType
 
     constructor(element: HTMLElement, type: CookieBannerActionType) {
-        this.element = element;
+        this._element = element;
         this.type = type;
     }
 
-    async execute() {
-        if (TESTING) {
-            RESULT_HANDLER?.addXpath(this.element)
-            if (this.isBannerCompleted()) await RESULT_HANDLER?.sendResults()
-        }
-        this.element.click()
-        return this.isBannerCompleted()
+    execute() {
+        return new Promise<void>(async (resolve) => {
+            if (TESTING) {
+                RESULT_HANDLER?.addXpath(this.element)
+                if (this.isBannerCompleted()) await RESULT_HANDLER?.sendResults()
+            }
+            this.element.click()
+            resolve()
+        })
     }
 
-    private isBannerCompleted() {
+    isBannerCompleted() {
         return this.type !== CookieBannerActionType.SETTINGS
+    }
+
+    get element() {
+        return this._element
     }
 }
 
