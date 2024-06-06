@@ -1,5 +1,5 @@
 import { CookieBannerActionType } from "./types";
-import { KEYWORDS } from "./data";
+import { ACTION_KEYWORDS } from "./data";
 
 
 export interface KeywordMatcher {
@@ -13,12 +13,13 @@ abstract class AbstractKeywordMatcher implements KeywordMatcher {
     abstract get type(): CookieBannerActionType;
 
     hasMatch(txt: string): boolean {
+        if (txt.length > 34) return false
         return this.keywords.some(keyword => txt.includes(keyword));
     }
 }
 
 export class DenyKeywords extends AbstractKeywordMatcher {
-    private readonly _keywords: Array<string> = KEYWORDS.DENY
+    private readonly _keywords: Array<string> = ACTION_KEYWORDS.DENY
 
     get keywords(): Array<string> {
         return this._keywords;
@@ -30,7 +31,7 @@ export class DenyKeywords extends AbstractKeywordMatcher {
 }
 
 export class SettingsKeywords extends AbstractKeywordMatcher {
-    private readonly _keywords: Array<string> = KEYWORDS.SETTINGS
+    private readonly _keywords: Array<string> = ACTION_KEYWORDS.SETTINGS
 
     get keywords(): Array<string> {
         return this._keywords;
@@ -42,7 +43,7 @@ export class SettingsKeywords extends AbstractKeywordMatcher {
 }
 
 export class ConfirmKeywords extends AbstractKeywordMatcher {
-    private readonly _keywords: Array<string> = KEYWORDS.CONFIRM
+    private readonly _keywords: Array<string> = ACTION_KEYWORDS.CONFIRM
 
     get keywords(): Array<string> {
         return this._keywords;
