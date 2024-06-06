@@ -4,7 +4,6 @@
   "description": "",
   "main": "src/contentScript.ts",
   "scripts": {
-    "test_server": "node testing/server.cjs",
     "test": "npx jest",
     "build": "esbuild src/contentScript.ts --bundle --outfile=dist/contentScript.js --platform=browser --format=iife --target=es2015"
   },

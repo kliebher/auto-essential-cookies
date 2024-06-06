@@ -7,30 +7,34 @@ const DenyKeywordMatcher = new DenyKeywords()
 const SettingsKeywordMatcher = new SettingsKeywords()
 const ConfirmKeywordMatcher = new ConfirmKeywords()
 
-const INITIAL_TAB_KEYWORDS: Array<KeywordMatcher> = [
+const BASIC_KEYWORDS: Array<KeywordMatcher> = [
     DenyKeywordMatcher,
     ConfirmKeywordMatcher,
     SettingsKeywordMatcher,
 ]
 
-const SETTINGS_TAB_KEYWORDS: Array<KeywordMatcher> = [
+const SETTINGS_KEYWORDS: Array<KeywordMatcher> = [
     DenyKeywordMatcher,
     ConfirmKeywordMatcher
 ]
 
-const TESTING = true
-const LOADING_TIMEOUT: number = 200 //ms
+const TESTING = false
+
+const UPDATE_TIMEOUT: number = 300 //ms
+const INITIAL_TIMEOUT: number = 600
+
 const SESSION_STORAGE = new SessionStorageHandler()
 const RESULT_HANDLER = TESTING ? new TestResultHandler() : null
 
 
 export {
     TESTING,
-    LOADING_TIMEOUT,
+    INITIAL_TIMEOUT,
+    UPDATE_TIMEOUT,
     SESSION_STORAGE,
     RESULT_HANDLER,
-    INITIAL_TAB_KEYWORDS,
-    SETTINGS_TAB_KEYWORDS,
+    BASIC_KEYWORDS,
+    SETTINGS_KEYWORDS,
     DenyKeywordMatcher,
     SettingsKeywordMatcher,
     ConfirmKeywordMatcher

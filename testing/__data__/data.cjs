@@ -40,7 +40,7 @@ module.exports = [
     {
         "url": "https://www.ebay.de",
         "expected": [
-            "/html/body/div[5]/div/div/div/div[2]/div[1]/div[2]/div[2]/div[2]/button[1]"
+            "/html/body/div[4]/div/div/div/div[2]/div[1]/div[2]/div[2]/div[2]/button[1]"
         ]
     },
     {
@@ -96,7 +96,7 @@ module.exports = [
         ]
     },
     {
-        "url": "https://consent.yahoo.com",
+        "url": "https://www.yahoo.com",
         "expected": [
             "/html/body/div/div/div/div/form/div[2]/div[2]/button[2]"
         ]
