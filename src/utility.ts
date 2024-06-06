@@ -10,7 +10,7 @@ function isCookieBanner(node: HTMLElement | CookieBanner): node is CookieBanner 
 }
 
 function timeout(ms: number) {
-    return new Promise((resolve) => {
+    return new Promise<void>(async (resolve) => {
         setTimeout(resolve, ms)
     })
 }
