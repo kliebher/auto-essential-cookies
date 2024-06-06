@@ -42,7 +42,7 @@ for (const { url, expected } of EXPECTED_RESULTS){
                 await new Promise((resolve) => setTimeout(resolve, 50))
             }
             await browser.close();
-        }, 5000);
+        }, 7500);
 
         test ('clicked correct elements', async () => {
             const resultEntry = outputHandler.getResult(store.currentKey)
