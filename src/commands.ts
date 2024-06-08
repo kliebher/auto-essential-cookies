@@ -519,8 +519,12 @@ class CheckState extends Command {
 class CommandSequenceProvider {
     constructor() {}
 
-    static get(state: ProcessState, sameRoot: boolean = false, settings: boolean = false) {
-        const sequence = sameRoot ? this.COMMAND_SEQUENCE_SAME_ROOT : this.COMMAND_SEQUENCE_FULL_DOM
+    static get(state: ProcessState, sameRoot: boolean = false, settings: boolean = false, retry: boolean = false) {
+        const sequence = retry
+            ? this.COMMAND_SEQUENCE_FULL_DOM_RETRY
+            : sameRoot
+                ? this.COMMAND_SEQUENCE_SAME_ROOT
+                : this.COMMAND_SEQUENCE_FULL_DOM
         const keywords: Array<KeywordMatcher> = settings ? SETTINGS_KEYWORDS : BASIC_KEYWORDS
         return sequence(state, keywords)
     }
@@ -540,6 +544,18 @@ class CommandSequenceProvider {
 
     static COMMAND_SEQUENCE_SAME_ROOT = (state: ProcessState, keywords: KeywordMatcher[]) => {
         return [
+            new FindActionNodes(state),
+            new ClassifyActionNodes(state, keywords),
+            new ExecuteAction(state),
+            new CheckState(state)
+        ]
+    }
+
+    static COMMAND_SEQUENCE_FULL_DOM_RETRY = (state: ProcessState, keywords: KeywordMatcher[]) => {
+        return [
+            new IdentifyUniqueRoots(state),
+            new CreateCookieBannerObject(state),
+            new DetectAboModel(state),
             new FindActionNodes(state),
             new ClassifyActionNodes(state, keywords),
             new ExecuteAction(state),

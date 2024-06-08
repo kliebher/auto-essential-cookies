@@ -15,11 +15,13 @@ export class ProcessManager {
         this.commandExecutor = new CommandExecutor(this.state)
     }
 
-    async init() {
+    async init(arg?: HTMLElement[]) {
         if (TESTING) RESULT_HANDLER?.setStartTime()
         this.state.setExecutionStart()
-        const initSequence = CommandSequenceProvider.get(this.state)
-        this.state.commandQueue.addCommand(initSequence, [], false, false)
+
+        const initSequence: Command[] = CommandSequenceProvider.get(this.state, false, false, arg !== undefined)
+        this.state.commandQueue.addCommand(initSequence, arg ? arg : [], false, false)
+
         await new Promise<void>(async (resolve) => {
             while (this.state.commandQueue.hasNext()) {
                 await this.commandExecutor.executeCommands()
