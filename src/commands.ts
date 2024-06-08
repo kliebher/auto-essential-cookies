@@ -67,9 +67,9 @@ class FindCookieRelatedNodes extends Command {
 
     private isCookieRelated(node: HTMLElement): boolean {
         if (!node.innerText) return false
-        const nodeInnerText = node.innerText.toLowerCase();
         if (this.invalidHTMLTags.has(node.tagName.toLowerCase())) return false
-        return nodeInnerText.includes('cookies')
+        const regExp = new RegExp(/Cookies|cookies/gm)
+        return regExp.test(node.innerText)
     }
 
     private handleShadowRoot(node: HTMLElement): void {
