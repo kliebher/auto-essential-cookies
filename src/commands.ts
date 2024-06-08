@@ -365,7 +365,6 @@ class ClassifyActionNodes extends Command {
     private isValidMatch(match: HTMLElement | null, type: CookieBannerActionType): boolean {
         if (!match) return false
         if (match.hasAttribute('type') && match.getAttribute('type') === 'submit') return false
-        console.log(match)
         if (this.isFooterContent(match)) return false
         if (this.actionAlreadyExecuted(match)) return false
         return !this.isFalsePositive(match, type);
@@ -435,7 +434,9 @@ class ExecuteAction extends Command {
     }
 
     private unselectCheckboxes(checkboxes: Array<HTMLInputElement>) {
-        checkboxes.forEach(checkbox => checkbox.checked = false)
+        checkboxes.forEach((checkbox: HTMLInputElement) => {
+            checkbox.checked = checkbox.disabled ? checkbox.checked : false
+        })
     }
 }
 
@@ -450,11 +451,11 @@ class CheckState extends Command {
     public execute(): Promise<void> {
         return new Promise<void>(async (resolve) => {
             const processDone = this.handleNoResult()
-            if (processDone) resolve()
+            if (processDone) return resolve()
 
             this.handleResult()
 
-            if (!this.state.addedCommands) {
+            if (!this.state.addedCommands && this.state.bannersInProgress > 0) {
                 this.addSubsequentCommands()
                 // wait for DOM to update after click
                 await util.timeout(UPDATE_TIMEOUT)
@@ -467,7 +468,8 @@ class CheckState extends Command {
 
     private handleNoResult() {
         if (!this.hasResults() && !this.foundBanner()) {
-            this.state.finishProcess(false)
+            // this.state.finishProcess(false)
+            this.state.commandQueue.clear()
             return true
         }
         else return this.state.result.length === 0;
@@ -485,7 +487,7 @@ class CheckState extends Command {
         const completedBanners = this.getResult(true)
         this.state.bannersInProgress -= completedBanners.length
         if (this.state.bannersInProgress === 0) {
-            this.state.finishProcess(true, 'Cookies Managed!')
+            this.state.finishProcess(true, 'Banner Managed!')
         }
     }
 
@@ -558,10 +560,10 @@ class CommandExecutor {
         if (next) {
             this.updateState(next)
             for (const command of next.sequence) {
-                const start = performance.now()
+                // const start = performance.now()
                 await command.execute()
-                util.colorTrace(`[${command.constructor.name}](${window.location.host}) executed in ${(performance.now() - start).toFixed(2)}ms`, "lightgreen")
-                console.dir([...this.state.result])
+                // util.colorTrace(`[${command.constructor.name}](${window.location.host}) executed in ${(performance.now() - start).toFixed(2)}ms`, "lightgreen")
+                // console.dir([...this.state.result])
             }
         }
     }
@@ -608,6 +610,10 @@ class CommandQueue {
 
     public hasNext(): boolean {
         return this.commands.length > 0
+    }
+
+    public clear() {
+        this.commands = []
     }
 }
 
