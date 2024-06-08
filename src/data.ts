@@ -24,14 +24,15 @@ const ACTION_KEYWORDS: {[key: string]: string[]} = {
     ],
 
     'CONFIRM': [
-        "essenziell",
-        "essential",
+        "essenziell", "essential",
         "confirm my choices",
         "confirm choices",
+        "confirm",
         "save", "speichern",
         "selected",
         "ausgewählt",
-        "weiter zu"
+        "weiter zu",
+        "use selection"
     ],
 }
 
