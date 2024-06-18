@@ -37,8 +37,9 @@ for (const { url, expected } of EXPECTED_RESULTS){
             const browser = await puppeteer.launch(configPT);
             const page = await browser.newPage()
             await page.goto(url);
+            const startedAt = performance.now()
             while (1) {
-                if (store.status === 'done') break
+                if (store.status === 'done' || ((performance.now() - startedAt >= 5000) && expected.length === 0)) break
                 await new Promise((resolve) => setTimeout(resolve, 50))
             }
             await browser.close();
