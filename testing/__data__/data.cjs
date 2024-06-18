@@ -40,7 +40,7 @@ module.exports = [
     {
         "url": "https://www.ebay.de",
         "expected": [
-            "/html/body/div[4]/div/div/div/div[2]/div[1]/div[2]/div[2]/div[2]/button[1]"
+            "/html/body/div[4]/div/div/div/div[2]/div/div[2]/div[2]/div[2]/button"
         ]
     },
     {
@@ -50,7 +50,7 @@ module.exports = [
     {
         "url": "https://x.com",
         "expected": [
-            "/html/body/div/div/div/div/div/div[2]/div/div/div/div[2]/button[2]"
+            "/html/body/div/div/div/div/div/div/div/div/div/div[2]/button[2]"
         ]
     },
     {
@@ -76,13 +76,13 @@ module.exports = [
     {
         "url": "https://www.gls-pakete.de",
         "expected": [
-            "/html/body/div//div/div[2]/div[2]/span[2]/a"
+            "/div/div[2]/div[2]/span[2]/a"
         ]
     },
     {
         "url": "https://www.tiktok.com",
         "expected": [
-            "/html/body/tiktok-cookie-banner//div/div[2]/button"
+            "/div/div[2]/button"
         ]
     },
     {
@@ -92,7 +92,7 @@ module.exports = [
     {
         "url": "https://www.dhl.de",
         "expected": [
-            "/html/body/div[10]/div[2]/div/div/div/div[2]/div/button[2]"
+            "/html/body/div[11]/div[2]/div/div/div/div[2]/div/button[2]"
         ]
     },
     {
@@ -104,7 +104,7 @@ module.exports = [
     {
         "url": "https://www.netflix.com",
         "expected": [
-            "/html/body/div[4]/div[2]/div/div/div/div[2]/div/button[2]"
+            "/html/body/div[6]/div[2]/div/div/div/div[2]/div/button[2]"
         ]
     },
     {
@@ -137,7 +137,7 @@ module.exports = [
     {
         "url": "https://www.reddit.com",
         "expected": [
-            "/html/body/shreddit-app/shreddit-async-loader[2]/reddit-cookie-banner//div/shreddit-interactable-element[2]/button"
+            "/div/shreddit-interactable-element[2]/button"
         ]
     },
     {
@@ -169,13 +169,13 @@ module.exports = [
     {
         "url": "https://www.microsoft.com",
         "expected": [
-            "/html/body/div/div[3]/div/div/div/div/div/div/div/div/div/div[2]/button[2]"
+            "/html/body/div[3]/div/div/div/div[2]/div/div/div/div[2]/button[2]"
         ]
     },
     {
         "url": "https://www.idealo.de",
         "expected": [
-            "/html/body/aside//div[2]/div/footer/div/div/button"
+            "/div[2]/div/footer/div/div/button"
         ]
     },
     {
@@ -206,7 +206,7 @@ module.exports = [
     {
         "url": "https://www.jimdo.com",
         "expected": [
-            "/html/body/aside//div/div/footer/div[2]/div/button "
+            "/div/div/footer/div/div/button"
         ]
     },
     {
