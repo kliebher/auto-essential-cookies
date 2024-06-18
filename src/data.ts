@@ -1,4 +1,4 @@
-const COOKIE_QUERY: string = 'span, p, h3, h2, h4, aside, [id*="policy"], [id*="consent"], [id*="message-container"], [id*="cookie"], [aria-label*="policy"], [aria-label*="consent"], [aria-label*="cookie"], [id*="cmp"]'
+const COOKIE_QUERY: string = 'span, p, h3, h2, h4, aside, a, [id*="policy"], [id*="consent"], [id*="message-container"], [id*="cookie"], [aria-label*="policy"], [aria-label*="consent"], [aria-label*="cookie"], [id*="cmp"], [bundlename*="cookie"]'
 
 const ACTION_KEYWORDS: {[key: string]: string[]} = {
     'DENY': [
@@ -7,7 +7,6 @@ const ACTION_KEYWORDS: {[key: string]: string[]} = {
         "decline",
         "refuse",
         "notwendig",
-        "auswahl",
         "deny",
         "weigern",
         "neccessary only",
@@ -32,7 +31,9 @@ const ACTION_KEYWORDS: {[key: string]: string[]} = {
         "selected",
         "ausgewählt",
         "weiter zu",
-        "use selection"
+        "use selection",
+        "auswahl",
+        "bestätigen"
     ],
 }
 
@@ -41,7 +42,9 @@ const ABONNEMENT_KEYWORDS = [
     'with advertising',
     "mit tracking",
     "ohne Werbetracking",
-    "werbefrei"
+    "werbefrei",
+    "Werbefrei",
+    "werbefreies"
 ]
 
 
