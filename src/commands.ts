@@ -103,8 +103,8 @@ class IdentifyUniqueRoots extends Command {
     constructor(state: ProcessState) {
         super()
         this.state = state
-        this.invalidStartTags = new Set(['body', 'html', 'head', 'script', 'style', 'meta', 'strong']);
-        this.invalidRootTags = new Set(['p', 'span', 'h2', 'h3', 'h4']);
+        this.invalidStartTags = new Set(['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'STRONG', 'SHREDDIT-APP']);
+        this.invalidRootTags = new Set(['P', 'H2', 'H3', 'H4', 'UL']);
         this.invalidKnownIds = new Set(['react-root', 'app', 'ng-app'])
     }
 
