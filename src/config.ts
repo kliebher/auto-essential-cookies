@@ -21,7 +21,7 @@ const SETTINGS_KEYWORDS: Array<KeywordMatcher> = [
 const TESTING = false
 
 const UPDATE_TIMEOUT: number = 300 //ms
-const INITIAL_TIMEOUT: number = 300
+const INITIAL_TIMEOUT: number = 100
 
 const SESSION_STORAGE = new SessionStorageHandler()
 const RESULT_HANDLER = TESTING ? new TestResultHandler() : null
