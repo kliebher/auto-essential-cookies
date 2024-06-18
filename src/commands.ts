@@ -139,6 +139,9 @@ class IdentifyUniqueRoots extends Command {
         const parentNodeTagName = node.parentElement.tagName.toLowerCase()
         if (this.invalidStartTags.has(parentNodeTagName)) return node;
 
+        const amountOfElements = node.parentElement.querySelectorAll('*').length
+        if (amountOfElements > 500) return node
+
         const styleParent = window.getComputedStyle(node.parentElement);
         if (styleParent.width === '0px' || styleParent.height === '0px') return node;
         if (styleParent.display === 'none' || styleParent.visibility === 'hidden') return node;
@@ -148,7 +151,7 @@ class IdentifyUniqueRoots extends Command {
 
     private isValidRoot(node: HTMLElement, topLevelParentNode: HTMLElement | null): boolean {
         if (!topLevelParentNode) return false
-        if (this.invalidRootTags.has(topLevelParentNode.tagName.toLowerCase())) return false
+        if (this.invalidRootTags.has(topLevelParentNode.tagName)) return false
         if (this.invalidKnownIds.has(topLevelParentNode.id)) return false
         return !(this.state.result.includes(topLevelParentNode) && node !== topLevelParentNode);
     }
