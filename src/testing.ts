@@ -1,11 +1,12 @@
-import axios from 'axios'
-
 const LOCAL_STORAGE_KEY = 'AEC_testResult'
 const TEST_ENGINE_URL = 'http://localhost:3000'
 
-const testResultDefault: { clicked: string[], time: string } = {
+type TestResult = { clicked: string[], time: string, elements: number }
+
+const testResultDefault: TestResult = {
     "clicked": [],
-    "time": ""
+    "time": "",
+    "elements": 0
 }
 
 function getXPathByElement(element: HTMLElement): string {
@@ -21,6 +22,7 @@ function getXPathByElement(element: HTMLElement): string {
 
 export class TestResultHandler  {
     key: string = LOCAL_STORAGE_KEY
+    axios = require('axios')
 
     addXpath(element: HTMLElement): void {
         const xpath = getXPathByElement(element)
@@ -41,10 +43,19 @@ export class TestResultHandler  {
         localStorage.setItem(this.key, JSON.stringify(parsed))
     }
 
+    setElementsInRoot(amount: number) {
+        const current = localStorage.getItem(this.key)
+        const parsed = current ? JSON.parse(current) : testResultDefault
+        if (parsed) {
+            parsed.elements = amount
+        }
+        localStorage.setItem(this.key, JSON.stringify(parsed))
+    }
+
     async sendResults() {
         const current = localStorage.getItem(this.key)
         const parsed = current ? JSON.parse(current) : testResultDefault
         parsed.time = (performance.now() - parsed.time).toFixed(2)
-        await axios.post(TEST_ENGINE_URL, parsed)
+        await this.axios.post(TEST_ENGINE_URL, parsed)
     }
 }
