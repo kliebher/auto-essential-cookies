@@ -133,10 +133,10 @@ class IdentifyUniqueRoots extends Command {
 
     private identifyTopLevelParentNode(node: HTMLElement): HTMLElement | null {
         if (!node) return null;
-        if (this.invalidStartTags.has(node.tagName.toLowerCase())) return null;
+        if (this.invalidStartTags.has(node.tagName)) return null;
         if (node.parentElement === null) return node;
 
-        const parentNodeTagName = node.parentElement.tagName.toLowerCase()
+        const parentNodeTagName = node.parentElement.tagName
         if (this.invalidStartTags.has(parentNodeTagName)) return node;
 
         const amountOfElements = node.parentElement.querySelectorAll('*').length
@@ -387,6 +387,7 @@ class ClassifyActionNodes extends Command {
 
     private isValidMatch(match: HTMLElement | null, type: CookieBannerActionType): boolean {
         if (!match) return false
+        if (match.className.includes('reject') || match.className.includes('decline')) return true
         if (match.hasAttribute('type') && match.getAttribute('type') === 'submit') return false
         if (this.isFooterContent(match)) return false
         if (this.actionAlreadyExecuted(match)) return false
@@ -473,8 +474,8 @@ class CheckState extends Command {
 
     public execute(): Promise<void> {
         return new Promise<void>(async (resolve) => {
-            const processDone = this.handleNoResult()
-            if (processDone) return resolve()
+            const searchFailed = this.handleNoResult()
+            if (searchFailed) return resolve()
 
             this.handleResult()
 
@@ -491,11 +492,10 @@ class CheckState extends Command {
 
     private handleNoResult() {
         if (!this.hasResults() && !this.foundBanner()) {
-            // this.state.finishProcess(false)
             this.state.commandQueue.clear()
             return true
         }
-        else return this.state.result.length === 0;
+        else return this.state.bannersInProgress === 0;
     }
 
     private foundBanner() {
