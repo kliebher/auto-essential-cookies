@@ -83,7 +83,7 @@ class FindCookieRelatedNodes extends Command {
     }
 
     private isFooterContent(node: HTMLElement): boolean {
-        const footer = document.querySelector('footer')
+        const footer = document.querySelector('footer, [class*="footer"], [class*="Footer"], [id*="footer"], [id*="Footer"], [data-testid*="Footer"], [data-testid*="footer"]')
         return footer ? footer.contains(node) : false
     }
 
