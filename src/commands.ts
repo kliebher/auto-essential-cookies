@@ -307,6 +307,22 @@ class FindActionNodes extends Command {
         banner.actionElements['checkboxes'] = this.getElementsByQuery(root, 'input[type=checkbox]')
         banner.actionElements['links'] = this.getElementsByQuery(root, 'a')
         banner.actionElements['uncommon'] = this.getElementsByQuery(root, '[aria-label*="ablehnen"')
+        if (banner.actionElements['buttons'].length === 0) {
+            this.actionDeepSearch('button', banner.root, banner.actionElements['buttons'])
+        }
+    }
+
+    private actionDeepSearch(query: string, root: HTMLElement, store: HTMLElement[]) {
+        const queryResults = Array.from(root.querySelectorAll(query)) as HTMLElement[]
+        for (const action of queryResults) {
+            if (!store.includes(action)) store.push(action)
+        }
+        if (queryResults.length === 0) {
+            let children = Array.from(root.childNodes)
+            if (root.shadowRoot) children.push(...Array.from(root.shadowRoot.childNodes))
+            children = children.filter((node) => node.nodeName !== '#text' && node.nodeName !== '#comment')
+            children.forEach((child) => this.actionDeepSearch(query, child as HTMLElement, store))
+        }
     }
 
     private getElementsByQuery(root: HTMLElement, query: string): HTMLElement[] {
