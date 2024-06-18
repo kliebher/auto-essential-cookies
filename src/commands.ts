@@ -119,6 +119,7 @@ class IdentifyUniqueRoots extends Command {
                 const topLevelParentNode = this.identifyTopLevelParentNode(node);
                 if (topLevelParentNode && this.isValidRoot(node, topLevelParentNode)) {
                     this.state.result[i] = topLevelParentNode;
+                    RESULT_HANDLER?.setElementsInRoot(topLevelParentNode.querySelectorAll('*').length)
                     continue
                 }
                 this.state.removeResultByIndex(i--)
