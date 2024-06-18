@@ -159,11 +159,14 @@ class IdentifyUniqueRoots extends Command {
     private checkForChild() {
         if (this.state.result.length <= 1) return
         for (let i = 0; i < this.state.result.length; i++) {
-            for (let ii = 1; ii < this.state.result.length; ii++) {
+            for (let ii = i+1; ii < this.state.result.length; ii++) {
+                if (ii > this.state.result.length - 1) return
                 const a = this.state.result[i]
                 const b = this.state.result[ii]
                 if (!util.isHTMLElement(a) || !util.isHTMLElement(b)) continue
-                if (a.contains(b)) this.state.removeResultByIndex(ii)
+                if (a.contains(b)) {
+                    this.state.removeResultByIndex(i)
+                }
             }
         }
     }
