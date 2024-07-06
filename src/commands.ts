@@ -599,10 +599,7 @@ class CommandExecutor {
         if (next) {
             this.updateState(next)
             for (const command of next.sequence) {
-                // const start = performance.now()
                 await command.execute()
-                // util.colorTrace(`[${command.constructor.name}](${window.location.host}) executed in ${(performance.now() - start).toFixed(2)}ms`, "lightgreen")
-                // console.dir([...this.state.result])
             }
         }
     }
