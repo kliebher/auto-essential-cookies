@@ -1,14 +1,14 @@
 {
   "name": "auto-essential-cookies",
   "version": "1.0.0",
-  "description": "",
+  "description": "Automatically handles cookie consent by proceeding with essential cookies only.",
   "main": "src/contentScript.ts",
   "scripts": {
     "test": "npx jest",
     "build": "esbuild src/contentScript.ts --bundle --outfile=dist/contentScript.js --platform=browser --format=iife --target=es2015"
   },
   "author": "kliebher",
-  "license": "ISC",
+  "license": "CC BY-NC-SA 4.0",
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "axios": "^1.7.2",
